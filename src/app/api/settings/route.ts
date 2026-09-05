@@ -1,0 +1,35 @@
+import { getSettings } from "@/lib/services/settings";
+import { errorResponse, jsonResponse } from "@/lib/utils";
+import { settingsSchema } from "@/lib/validations/schemas";
+import { prisma } from "@/lib/db";
+
+export async function GET() {
+  try {
+    const settings = await getSettings();
+    return jsonResponse(settings);
+  } catch (error) {
+    console.error("GET /api/settings:", error);
+    return errorResponse("설정을 불러오지 못했습니다", 500);
+  }
+}
+
+export async function PUT(request: Request) {
+  try {
+    const body = await request.json();
+    const parsed = settingsSchema.safeParse(body);
+    if (!parsed.success) {
+      return errorResponse(parsed.error.issues[0]?.message ?? "유효하지 않은 입력입니다");
+    }
+
+    const existing = await getSettings();
+    const settings = await prisma.userSettings.update({
+      where: { id: existing.id },
+      data: parsed.data,
+    });
+
+    return jsonResponse(settings);
+  } catch (error) {
+    console.error("PUT /api/settings:", error);
+    return errorResponse("설정을 저장하지 못했습니다", 500);
+  }
+}

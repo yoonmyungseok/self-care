@@ -1,69 +1,248 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import { useEffect, useState } from "react";
+import { AppLayout } from "@/components/layout/AppLayout";
+import { Card } from "@/components/ui/Card";
+import { StatCard } from "@/components/ui/StatCard";
+import { ProgressBar } from "@/components/ui/ProgressBar";
+import { LoadingSpinner } from "@/components/ui/Loading";
+import { WeightChart, RunningDistanceChart } from "@/components/charts/Charts";
+import { formatWeightChange } from "@/lib/calculations/weight";
+import { formatPace } from "@/lib/calculations/running";
+import { formatDisplayDate } from "@/lib/utils";
+import { getRunningTypeLabel, getMealTypeLabel } from "@/lib/constants";
+
+interface DashboardData {
+  weight: {
+    current: number | null;
+    change7Days: number | null;
+    change30Days: number | null;
+    targetWeight: number;
+    remainingToTarget: number | null;
+  };
+  running: {
+    weekDistance: number;
+    monthDistance: number;
+    recentAveragePace: number | null;
+    chartData: { date: string; distance: number }[];
+    recentRecords: {
+      id: number;
+      date: string;
+      type: string;
+      distance: number;
+      avgPaceSeconds: number | null;
+    }[];
+  };
+  targets: {
+    targetCalories: number;
+    targetCarbs: number;
+    targetProtein: number;
+    targetFat: number;
+  };
+  diet: {
+    calories: number;
+    carbs: number;
+    protein: number;
+    fat: number;
+    remainingCalories: number;
+    calorieProgress: number;
+    carbsProgress: number;
+    proteinProgress: number;
+    fatProgress: number;
+  };
+  weightChartData: { date: string; weight: number }[];
+  recentWeightRecords: {
+    id: number;
+    date: string;
+    weight: number;
+  }[];
+  todayMeals: {
+    id: number;
+    mealType: string;
+    foodEntries: { id: number; foodName: string; calories: number }[];
+  }[];
+}
+
+export default function DashboardPage() {
+  const [data, setData] = useState<DashboardData | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/dashboard")
+      .then((res) => res.json())
+      .then(setData)
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading) {
+    return (
+      <AppLayout>
+        <LoadingSpinner />
+      </AppLayout>
+    );
+  }
+
+  if (!data) {
+    return (
+      <AppLayout>
+        <p className="text-center text-slate-500">데이터를 불러올 수 없습니다</p>
+      </AppLayout>
+    );
+  }
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <AppLayout>
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-slate-900">Dashboard</h1>
+        <p className="text-sm text-slate-500">오늘의 건강 상태를 한눈에 확인하세요</p>
+      </div>
+
+      <section className="mb-6">
+        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500">
+          오늘의 요약
+        </h2>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+          <StatCard
+            label="현재 체중"
+            value={data.weight.current != null ? `${data.weight.current.toFixed(1)} kg` : "-"}
+            subValue={formatWeightChange(data.weight.change7Days) + " (7일)"}
+            trend={
+              data.weight.change7Days != null
+                ? data.weight.change7Days > 0
+                  ? "up"
+                  : data.weight.change7Days < 0
+                    ? "down"
+                    : "neutral"
+                : undefined
+            }
+          />
+          <StatCard
+            label="목표 체중"
+            value={`${data.weight.targetWeight.toFixed(1)} kg`}
+            subValue={
+              data.weight.remainingToTarget != null
+                ? `${data.weight.remainingToTarget > 0 ? "+" : ""}${data.weight.remainingToTarget.toFixed(1)} kg`
+                : "-"
+            }
+          />
+          <StatCard
+            label="오늘 칼로리"
+            value={`${data.diet.calories.toFixed(0)} kcal`}
+            subValue={`남은 ${data.diet.remainingCalories.toFixed(0)} kcal`}
+          />
+          <StatCard
+            label="목표 칼로리"
+            value={`${data.targets.targetCalories.toFixed(0)} kcal`}
+            subValue={`${data.diet.calorieProgress.toFixed(0)}% 달성`}
+          />
+          <StatCard
+            label="이번 주 러닝"
+            value={`${data.running.weekDistance.toFixed(1)} km`}
+            subValue={`이번 달 ${data.running.monthDistance.toFixed(1)} km`}
+          />
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+      </section>
+
+      <div className="mb-6 grid gap-6 lg:grid-cols-2">
+        <Card title="체중 변화 (최근 30일)">
+          <WeightChart data={data.weightChartData} />
+        </Card>
+        <Card title="러닝 거리 (최근 30일)">
+          <RunningDistanceChart data={data.running.chartData} />
+        </Card>
+      </div>
+
+      <Card title="오늘의 영양소" className="mb-6">
+        <div className="space-y-4">
+          <ProgressBar
+            label="칼로리"
+            current={data.diet.calories}
+            target={data.targets.targetCalories}
+            unit=" kcal"
+            color="bg-orange-500"
+          />
+          <ProgressBar
+            label="탄수화물"
+            current={data.diet.carbs}
+            target={data.targets.targetCarbs}
+            color="bg-amber-500"
+          />
+          <ProgressBar
+            label="단백질"
+            current={data.diet.protein}
+            target={data.targets.targetProtein}
+            color="bg-emerald-500"
+          />
+          <ProgressBar
+            label="지방"
+            current={data.diet.fat}
+            target={data.targets.targetFat}
+            color="bg-rose-500"
+          />
         </div>
-      </main>
-    </div>
+      </Card>
+
+      <section>
+        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500">
+          최근 기록
+        </h2>
+        <div className="grid gap-6 lg:grid-cols-3">
+          <Card title="최근 체중">
+            {data.recentWeightRecords.length === 0 ? (
+              <p className="text-sm text-slate-500">기록이 없습니다</p>
+            ) : (
+              <ul className="space-y-2">
+                {data.recentWeightRecords.map((r) => (
+                  <li key={r.id} className="flex justify-between text-sm">
+                    <span className="text-slate-500">{formatDisplayDate(r.date)}</span>
+                    <span className="font-medium">{r.weight.toFixed(1)} kg</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Card>
+          <Card title="최근 러닝">
+            {data.running.recentRecords.length === 0 ? (
+              <p className="text-sm text-slate-500">기록이 없습니다</p>
+            ) : (
+              <ul className="space-y-2">
+                {data.running.recentRecords.map((r) => (
+                  <li key={r.id} className="flex justify-between text-sm">
+                    <span>
+                      <span className="text-slate-500">{formatDisplayDate(r.date)}</span>
+                      <span className="ml-2 text-slate-400">{getRunningTypeLabel(r.type)}</span>
+                    </span>
+                    <span className="font-medium">
+                      {r.distance.toFixed(1)} km · {formatPace(r.avgPaceSeconds)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Card>
+          <Card title="오늘 식단">
+            {data.todayMeals.length === 0 ? (
+              <p className="text-sm text-slate-500">오늘 기록된 식단이 없습니다</p>
+            ) : (
+              <ul className="space-y-3">
+                {data.todayMeals.map((meal) => (
+                  <li key={meal.id}>
+                    <p className="text-xs font-semibold text-slate-500">
+                      {getMealTypeLabel(meal.mealType)}
+                    </p>
+                    {meal.foodEntries.map((f) => (
+                      <div key={f.id} className="flex justify-between text-sm">
+                        <span>{f.foodName}</span>
+                        <span className="text-slate-500">{f.calories.toFixed(0)} kcal</span>
+                      </div>
+                    ))}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Card>
+        </div>
+      </section>
+    </AppLayout>
   );
 }
