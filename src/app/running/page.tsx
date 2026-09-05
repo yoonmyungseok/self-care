@@ -14,6 +14,7 @@ import { useToast } from "@/components/ui/Toast";
 import { formatPace, calculatePaceSeconds, formatDistanceChange } from "@/lib/calculations/running";
 import { formatDisplayDate, formatDuration, parseDurationToSeconds, todayString } from "@/lib/utils";
 import { RUNNING_TYPES, getRunningTypeLabel } from "@/lib/constants";
+import { formatRunningRecordText } from "@/lib/format/running-text";
 
 interface RunningSplit {
   id?: number;
@@ -21,6 +22,8 @@ interface RunningSplit {
   distance: number;
   durationSeconds: number;
   paceSeconds?: number | null;
+  heartRate?: number | null;
+  cadence?: number | null;
 }
 
 interface RunningRecord {
@@ -61,7 +64,7 @@ const emptyForm = {
   memo: "",
 };
 
-const emptySplit = { splitNumber: 1, distance: "", duration: "" };
+const emptySplit = { splitNumber: 1, distance: "", duration: "", heartRate: "", cadence: "" };
 
 export default function RunningPage() {
   const { showToast } = useToast();
@@ -121,6 +124,8 @@ export default function RunningPage() {
         splitNumber: s.splitNumber,
         distance: s.distance.toString(),
         duration: formatDuration(s.durationSeconds),
+        heartRate: s.heartRate?.toString() ?? "",
+        cadence: s.cadence?.toString() ?? "",
       })),
     );
     setModalOpen(true);
@@ -151,6 +156,8 @@ export default function RunningPage() {
             splitNumber: s.splitNumber,
             distance: parseFloat(s.distance),
             durationSeconds: dur!,
+            heartRate: s.heartRate ? parseInt(s.heartRate, 10) : null,
+            cadence: s.cadence ? parseInt(s.cadence, 10) : null,
           };
         }),
     };
@@ -204,6 +211,15 @@ export default function RunningPage() {
 
   const removeSplit = (index: number) => {
     setSplits(splits.filter((_, i) => i !== index).map((s, i) => ({ ...s, splitNumber: i + 1 })));
+  };
+
+  const copyRecord = async (record: RunningRecord) => {
+    try {
+      await navigator.clipboard.writeText(formatRunningRecordText(record));
+      showToast("복사되었습니다");
+    } catch {
+      showToast("복사에 실패했습니다", "error");
+    }
   };
 
   if (loading) {
@@ -280,6 +296,9 @@ export default function RunningPage() {
                     <td className="py-3 pr-4">{formatPace(r.avgPaceSeconds)}</td>
                     <td className="py-3">
                       <div className="flex gap-2">
+                        <Button variant="ghost" size="sm" onClick={() => copyRecord(r)}>
+                          복사
+                        </Button>
                         <Button variant="ghost" size="sm" onClick={() => openEdit(r)}>
                           수정
                         </Button>
@@ -371,7 +390,7 @@ export default function RunningPage() {
             </Button>
           </div>
           {splits.map((split, index) => (
-            <div key={index} className="mb-2 grid grid-cols-4 gap-2">
+            <div key={index} className="mb-2 grid grid-cols-6 gap-2">
               <Input
                 label={`구간 ${split.splitNumber}`}
                 type="number"
@@ -385,6 +404,18 @@ export default function RunningPage() {
                 placeholder="MM:SS"
                 value={split.duration}
                 onChange={(e) => updateSplit(index, "duration", e.target.value)}
+              />
+              <Input
+                label="심박수"
+                type="number"
+                value={split.heartRate}
+                onChange={(e) => updateSplit(index, "heartRate", e.target.value)}
+              />
+              <Input
+                label="케이던스"
+                type="number"
+                value={split.cadence}
+                onChange={(e) => updateSplit(index, "cadence", e.target.value)}
               />
               <div className="flex items-end pb-2 text-sm text-slate-500">
                 {(() => {

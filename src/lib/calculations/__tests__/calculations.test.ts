@@ -2,6 +2,8 @@ import { describe, it, expect } from "vitest";
 import {
   calculatePaceSeconds,
   formatPace,
+  formatPaceColon,
+  formatDistanceKm,
   calculateAveragePace,
   sumDistance,
   countRecords,
@@ -81,6 +83,16 @@ describe("running calculations", () => {
     expect(formatDistanceChange(3.2)).toBe("+3.2 km");
     expect(formatDistanceChange(-1.5)).toBe("-1.5 km");
     expect(formatDistanceChange(0)).toBe("0 km");
+  });
+
+  it("formats pace in colon style", () => {
+    expect(formatPaceColon(474)).toBe("7:54");
+    expect(formatPaceColon(null)).toBe("-");
+  });
+
+  it("formats distance for copy output", () => {
+    expect(formatDistanceKm(5)).toBe("5km");
+    expect(formatDistanceKm(10.5)).toBe("10.5km");
   });
 });
 

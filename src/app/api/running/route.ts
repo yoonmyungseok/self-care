@@ -125,7 +125,13 @@ export async function POST(request: Request) {
         splits: splits?.length
           ? {
               create: splits.map(
-                (s: { splitNumber: number; distance: number; durationSeconds: number }) => ({
+                (s: {
+                  splitNumber: number;
+                  distance: number;
+                  durationSeconds: number;
+                  heartRate?: number | null;
+                  cadence?: number | null;
+                }) => ({
                   ...s,
                   paceSeconds: calculatePaceSeconds(s.distance, s.durationSeconds),
                 }),

@@ -26,6 +26,8 @@ export const runningSplitSchema = z.object({
   splitNumber: z.number().int().positive(),
   distance: z.number().positive("거리는 0보다 커야 합니다"),
   durationSeconds: z.number().int().positive("시간은 0보다 커야 합니다"),
+  heartRate: z.number().int().nonnegative().optional().nullable(),
+  cadence: z.number().int().nonnegative().optional().nullable(),
 });
 
 export const foodEntrySchema = z.object({

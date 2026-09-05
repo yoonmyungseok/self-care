@@ -42,7 +42,13 @@ export async function PUT(request: Request, { params }: RouteParams) {
         if (splits.length > 0) {
           await tx.runningSplit.createMany({
             data: splits.map(
-              (s: { splitNumber: number; distance: number; durationSeconds: number }) => ({
+              (s: {
+                splitNumber: number;
+                distance: number;
+                durationSeconds: number;
+                heartRate?: number | null;
+                cadence?: number | null;
+              }) => ({
                 runningRecordId: recordId,
                 ...s,
                 paceSeconds: calculatePaceSeconds(s.distance, s.durationSeconds),

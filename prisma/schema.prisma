@@ -63,6 +63,8 @@ model RunningSplit {
   distance        Float
   durationSeconds Int
   paceSeconds     Float?
+  heartRate       Int?
+  cadence         Int?
   runningRecord   RunningRecord @relation(fields: [runningRecordId], references: [id], onDelete: Cascade)
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt

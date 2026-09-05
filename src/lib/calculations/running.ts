@@ -23,6 +23,20 @@ export function formatPace(paceSeconds: number | null | undefined): string {
   return `${minutes}'${seconds.toString().padStart(2, "0")}"/km`;
 }
 
+export function formatPaceColon(paceSeconds: number | null | undefined): string {
+  if (paceSeconds == null || !Number.isFinite(paceSeconds) || paceSeconds <= 0) {
+    return "-";
+  }
+  const minutes = Math.floor(paceSeconds / 60);
+  const seconds = Math.round(paceSeconds % 60);
+  return `${minutes}:${seconds.toString().padStart(2, "0")}`;
+}
+
+export function formatDistanceKm(distance: number): string {
+  const value = distance % 1 === 0 ? distance.toString() : distance.toFixed(1);
+  return `${value}km`;
+}
+
 export function calculateAveragePace(
   records: { distance: number; durationSeconds: number }[],
 ): number | null {

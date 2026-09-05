@@ -1,0 +1,70 @@
+import { formatPaceColon, formatDistanceKm } from "@/lib/calculations/running";
+import { formatDuration } from "@/lib/utils";
+import { getRunningTypeLabel } from "@/lib/constants";
+
+interface RunningSplit {
+  splitNumber: number;
+  distance: number;
+  durationSeconds: number;
+  paceSeconds?: number | null;
+  heartRate?: number | null;
+  cadence?: number | null;
+}
+
+interface RunningRecord {
+  date: string;
+  type: string;
+  distance: number;
+  durationSeconds: number;
+  avgPaceSeconds: number | null;
+  avgHeartRate: number | null;
+  maxHeartRate: number | null;
+  cadence: number | null;
+  memo: string | null;
+  splits: RunningSplit[];
+}
+
+function formatSplitLine(split: RunningSplit): string {
+  const pace = formatPaceColon(split.paceSeconds);
+  const parts = [`${split.splitNumber}km - 페이스: ${pace}`];
+
+  if (split.heartRate != null) {
+    parts.push(`심박수: ${split.heartRate}`);
+  }
+  if (split.cadence != null) {
+    parts.push(`케이던스: ${split.cadence}`);
+  }
+
+  return parts.join(" / ");
+}
+
+export function formatRunningRecordText(record: RunningRecord): string {
+  const lines = [
+    `날짜: ${record.date}`,
+    `종류: ${getRunningTypeLabel(record.type)}`,
+    `거리: ${formatDistanceKm(record.distance)}`,
+    `시간: ${formatDuration(record.durationSeconds)}`,
+    `평균페이스: ${formatPaceColon(record.avgPaceSeconds)}/km`,
+  ];
+
+  if (record.avgHeartRate != null) {
+    lines.push(`평균심박: ${record.avgHeartRate}`);
+  }
+  if (record.maxHeartRate != null) {
+    lines.push(`최대심박: ${record.maxHeartRate}`);
+  }
+  if (record.cadence != null) {
+    lines.push(`케이던스: ${record.cadence}`);
+  }
+
+  lines.push(`메모: ${record.memo ?? ""}`);
+
+  if (record.splits.length > 0) {
+    lines.push("", "구간별 기록");
+    for (const split of record.splits) {
+      lines.push(formatSplitLine(split));
+    }
+  }
+
+  return lines.join("\n");
+}
