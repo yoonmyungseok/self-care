@@ -10,6 +10,10 @@ datasource db {
 model UserSettings {
   id             Int      @id @default(autoincrement())
   targetWeight   Float    @default(70.0)
+  birthYear      Int      @default(1993)
+  gender         String   @default("male")
+  heightCm       Float    @default(176.0)
+  activityLevel  String   @default("moderate")
   targetCalories Float    @default(2000.0)
   targetCarbs    Float    @default(250.0)
   targetProtein  Float    @default(120.0)

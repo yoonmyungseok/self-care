@@ -28,6 +28,19 @@ export const BOWEL_OPTIONS = [
   { value: "none", label: "없음" },
 ] as const;
 
+export const GENDER_OPTIONS = [
+  { value: "male", label: "남성" },
+  { value: "female", label: "여성" },
+] as const;
+
+export const ACTIVITY_LEVEL_OPTIONS = [
+  { value: "sedentary", label: "거의 운동 안 함" },
+  { value: "light", label: "가벼운 활동 (주 1-3회)" },
+  { value: "moderate", label: "보통 활동 (주 3-5회)" },
+  { value: "active", label: "활발한 활동 (주 6-7회)" },
+  { value: "very_active", label: "매우 활발 (하루 2회 이상)" },
+] as const;
+
 export function getRunningTypeLabel(value: string): string {
   return RUNNING_TYPES.find((t) => t.value === value)?.label ?? value;
 }

@@ -37,3 +37,29 @@ export function calculateAveragePace(
 export function sumDistance(records: { distance: number }[]): number {
   return records.reduce((sum, r) => sum + r.distance, 0);
 }
+
+export function countRecords(
+  records: { date: string }[],
+  startDate: string,
+  endDate: string,
+): number {
+  return records.filter((r) => r.date >= startDate && r.date <= endDate).length;
+}
+
+export function findLongestRun(
+  records: { date: string; distance: number }[],
+): { distance: number; date: string } | null {
+  if (records.length === 0) return null;
+
+  const longest = records.reduce((best, record) =>
+    record.distance > best.distance ? record : best,
+  );
+
+  return { distance: longest.distance, date: longest.date };
+}
+
+export function formatDistanceChange(changeKm: number): string {
+  if (changeKm === 0) return "0 km";
+  const sign = changeKm > 0 ? "+" : "";
+  return `${sign}${changeKm.toFixed(1)} km`;
+}

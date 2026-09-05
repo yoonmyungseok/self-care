@@ -11,8 +11,13 @@ import { ProgressBar } from "@/components/ui/ProgressBar";
 import { Modal, ConfirmDialog } from "@/components/ui/Modal";
 import { LoadingSpinner, EmptyState } from "@/components/ui/Loading";
 import { useToast } from "@/components/ui/Toast";
-import { MEAL_TYPES, getMealTypeLabel } from "@/lib/constants";
+import { MEAL_TYPES } from "@/lib/constants";
 import { todayString } from "@/lib/utils";
+import {
+  scaleNutrition,
+  formatConsumptionDisplay,
+  deriveQuantityFromEntry,
+} from "@/lib/calculations/diet";
 
 interface FoodEntry {
   id: number;
@@ -73,6 +78,43 @@ const emptyForm = {
   memo: "",
 };
 
+function findFoodItem(foodItems: FoodItem[], foodName: string) {
+  return foodItems.find((f) => f.name === foodName);
+}
+
+function applyScaledNutrition(
+  item: FoodItem,
+  quantity: number,
+  form: typeof emptyForm,
+): typeof emptyForm {
+  const scaled = scaleNutrition(item, quantity, 1);
+  return {
+    ...form,
+    amount: quantity > 0 ? quantity.toString() : "",
+    unit: item.standardAmount,
+    calories: scaled.calories.toFixed(1),
+    carbs: scaled.carbs.toFixed(1),
+    protein: scaled.protein.toFixed(1),
+    fat: scaled.fat.toFixed(1),
+    sodium: scaled.sodium > 0 ? scaled.sodium.toFixed(1) : "",
+  };
+}
+
+function getEntryDisplayAmount(
+  entry: FoodEntry,
+  foodItems: FoodItem[],
+): string {
+  const item = findFoodItem(foodItems, entry.foodName);
+  if (item) {
+    const quantity =
+      entry.unit === item.standardAmount
+        ? entry.amount
+        : deriveQuantityFromEntry(entry, item);
+    return formatConsumptionDisplay(quantity, item.standardAmount);
+  }
+  return `${entry.amount} ${entry.unit}`;
+}
+
 export default function DietPage() {
   const { showToast } = useToast();
   const [selectedDate, setSelectedDate] = useState(todayString());
@@ -86,8 +128,12 @@ export default function DietPage() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [form, setForm] = useState(emptyForm);
-  const [selectedFoodItem, setSelectedFoodItem] = useState("");
+  const [selectedFoodItemId, setSelectedFoodItemId] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
+
+  const selectedFoodItem = selectedFoodItemId
+    ? foodItems.find((f) => f.id === selectedFoodItemId) ?? null
+    : null;
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -111,46 +157,75 @@ export default function DietPage() {
   const openCreate = (mealType?: string) => {
     setEditingId(null);
     setForm({ ...emptyForm, mealType: mealType ?? "breakfast" });
-    setSelectedFoodItem("");
+    setSelectedFoodItemId(null);
     setModalOpen(true);
   };
 
   const openEdit = (entry: FoodEntry, mealType: string) => {
     setEditingId(entry.id);
-    setForm({
-      mealType,
-      foodName: entry.foodName,
-      amount: entry.amount.toString(),
-      unit: entry.unit,
-      calories: entry.calories.toString(),
-      carbs: entry.carbs.toString(),
-      protein: entry.protein.toString(),
-      fat: entry.fat.toString(),
-      sodium: entry.sodium?.toString() ?? "",
-      memo: entry.memo ?? "",
-    });
+    const item = findFoodItem(foodItems, entry.foodName);
+
+    if (item) {
+      const quantity =
+        entry.unit === item.standardAmount
+          ? entry.amount
+          : deriveQuantityFromEntry(entry, item);
+
+      setSelectedFoodItemId(item.id);
+      setForm({
+        mealType,
+        foodName: entry.foodName,
+        amount: quantity.toString(),
+        unit: item.standardAmount,
+        calories: entry.calories.toString(),
+        carbs: entry.carbs.toString(),
+        protein: entry.protein.toString(),
+        fat: entry.fat.toString(),
+        sodium: entry.sodium?.toString() ?? "",
+        memo: entry.memo ?? "",
+      });
+    } else {
+      setSelectedFoodItemId(null);
+      setForm({
+        mealType,
+        foodName: entry.foodName,
+        amount: entry.amount.toString(),
+        unit: entry.unit,
+        calories: entry.calories.toString(),
+        carbs: entry.carbs.toString(),
+        protein: entry.protein.toString(),
+        fat: entry.fat.toString(),
+        sodium: entry.sodium?.toString() ?? "",
+        memo: entry.memo ?? "",
+      });
+    }
     setModalOpen(true);
   };
 
   const handleFoodItemSelect = (itemId: string) => {
-    setSelectedFoodItem(itemId);
+    if (!itemId) {
+      setSelectedFoodItemId(null);
+      return;
+    }
+
     const item = foodItems.find((f) => f.id === parseInt(itemId, 10));
     if (!item) return;
 
-    const match = item.standardAmount.match(/([\d.]+)/);
-    const standardValue = match ? parseFloat(match[1]) : 1;
+    setSelectedFoodItemId(item.id);
+    setForm(applyScaledNutrition(item, 1, { ...form, foodName: item.name }));
+  };
 
-    setForm({
-      ...form,
-      foodName: item.name,
-      amount: standardValue.toString(),
-      unit: item.standardAmount.replace(/[\d.]+/, "").trim() || "g",
-      calories: item.calories.toString(),
-      carbs: item.carbs.toString(),
-      protein: item.protein.toString(),
-      fat: item.fat.toString(),
-      sodium: item.sodium?.toString() ?? "",
-    });
+  const handleQuantityChange = (quantityStr: string) => {
+    if (selectedFoodItem) {
+      const quantity = parseFloat(quantityStr);
+      if (!quantityStr || Number.isNaN(quantity) || quantity <= 0) {
+        setForm({ ...form, amount: quantityStr });
+        return;
+      }
+      setForm(applyScaledNutrition(selectedFoodItem, quantity, form));
+      return;
+    }
+    setForm({ ...form, amount: quantityStr });
   };
 
   const handleSave = async () => {
@@ -319,7 +394,7 @@ export default function DietPage() {
                       <tr key={entry.id} className="border-b border-slate-100">
                         <td className="py-3 pr-4 font-medium">{entry.foodName}</td>
                         <td className="py-3 pr-4">
-                          {entry.amount} {entry.unit}
+                          {getEntryDisplayAmount(entry, foodItems)}
                         </td>
                         <td className="py-3 pr-4">{entry.calories.toFixed(0)} kcal</td>
                         <td className="py-3 pr-4 text-slate-500">
@@ -362,11 +437,11 @@ export default function DietPage() {
         title={editingId ? "음식 수정" : "음식 추가"}
         size="lg"
       >
-        {!editingId && foodItems.length > 0 && (
+        {foodItems.length > 0 && (
           <div className="mb-4">
             <Select
               label="음식 DB에서 선택"
-              value={selectedFoodItem}
+              value={selectedFoodItemId?.toString() ?? ""}
               onChange={(e) => handleFoodItemSelect(e.target.value)}
               options={[
                 { value: "", label: "직접 입력" },
@@ -389,49 +464,92 @@ export default function DietPage() {
             label="음식명"
             value={form.foodName}
             onChange={(e) => setForm({ ...form, foodName: e.target.value })}
+            disabled={!!selectedFoodItem}
           />
-          <Input
-            label="섭취량"
-            type="number"
-            step="0.1"
-            value={form.amount}
-            onChange={(e) => setForm({ ...form, amount: e.target.value })}
-          />
-          <Input
-            label="단위"
-            value={form.unit}
-            onChange={(e) => setForm({ ...form, unit: e.target.value })}
-          />
-          <Input
-            label="칼로리 (kcal)"
-            type="number"
-            value={form.calories}
-            onChange={(e) => setForm({ ...form, calories: e.target.value })}
-          />
-          <Input
-            label="탄수화물 (g)"
-            type="number"
-            value={form.carbs}
-            onChange={(e) => setForm({ ...form, carbs: e.target.value })}
-          />
-          <Input
-            label="단백질 (g)"
-            type="number"
-            value={form.protein}
-            onChange={(e) => setForm({ ...form, protein: e.target.value })}
-          />
-          <Input
-            label="지방 (g)"
-            type="number"
-            value={form.fat}
-            onChange={(e) => setForm({ ...form, fat: e.target.value })}
-          />
-          <Input
-            label="나트륨 (mg)"
-            type="number"
-            value={form.sodium}
-            onChange={(e) => setForm({ ...form, sodium: e.target.value })}
-          />
+          {selectedFoodItem ? (
+            <>
+              <div>
+                <p className="mb-1 text-sm font-medium text-slate-700">기준량</p>
+                <p className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
+                  {selectedFoodItem.standardAmount}
+                </p>
+              </div>
+              <Input
+                label="수량"
+                type="number"
+                step="0.1"
+                min="0.1"
+                value={form.amount}
+                onChange={(e) => handleQuantityChange(e.target.value)}
+                placeholder="예: 3"
+              />
+            </>
+          ) : (
+            <>
+              <Input
+                label="섭취량"
+                type="number"
+                step="0.1"
+                value={form.amount}
+                onChange={(e) => setForm({ ...form, amount: e.target.value })}
+              />
+              <Input
+                label="단위"
+                value={form.unit}
+                onChange={(e) => setForm({ ...form, unit: e.target.value })}
+              />
+            </>
+          )}
+          {selectedFoodItem ? (
+            <div className="sm:col-span-2 rounded-lg border border-emerald-200 bg-emerald-50 p-4">
+              <p className="mb-2 text-sm font-medium text-emerald-800">
+                {form.amount
+                  ? formatConsumptionDisplay(
+                      parseFloat(form.amount),
+                      selectedFoodItem.standardAmount,
+                    )
+                  : `${selectedFoodItem.standardAmount} × ?`}
+              </p>
+              <p className="text-sm text-emerald-700">
+                칼로리 {form.calories || "0"} kcal · 탄 {form.carbs || "0"}g · 단{" "}
+                {form.protein || "0"}g · 지 {form.fat || "0"}g
+                {form.sodium ? ` · 나트륨 ${form.sodium}mg` : ""}
+              </p>
+            </div>
+          ) : (
+            <>
+              <Input
+                label="칼로리 (kcal)"
+                type="number"
+                value={form.calories}
+                onChange={(e) => setForm({ ...form, calories: e.target.value })}
+              />
+              <Input
+                label="탄수화물 (g)"
+                type="number"
+                value={form.carbs}
+                onChange={(e) => setForm({ ...form, carbs: e.target.value })}
+              />
+              <Input
+                label="단백질 (g)"
+                type="number"
+                value={form.protein}
+                onChange={(e) => setForm({ ...form, protein: e.target.value })}
+              />
+              <Input
+                label="지방 (g)"
+                type="number"
+                value={form.fat}
+                onChange={(e) => setForm({ ...form, fat: e.target.value })}
+              />
+              <Input
+                label="나트륨 (mg)"
+                type="number"
+                value={form.sodium}
+                onChange={(e) => setForm({ ...form, sodium: e.target.value })}
+              />
+            </>
+          )}
           <Input
             label="메모"
             value={form.memo}

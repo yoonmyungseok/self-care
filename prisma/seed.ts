@@ -167,9 +167,9 @@ async function main() {
   });
   await prisma.foodEntry.createMany({
     data: [
-      { mealId: breakfast.id, foodName: "현미밥", amount: 130, unit: "g", calories: 210, carbs: 45, protein: 3, fat: 1.8, sodium: 15 },
-      { mealId: breakfast.id, foodName: "계란", amount: 2, unit: "개", calories: 156, carbs: 1.2, protein: 12.6, fat: 10.6, sodium: 124 },
-      { mealId: breakfast.id, foodName: "바나나", amount: 1, unit: "개", calories: 105, carbs: 27, protein: 1.3, fat: 0.4, sodium: 1 },
+      { mealId: breakfast.id, foodName: "현미밥", amount: 1, unit: "130g", calories: 210, carbs: 45, protein: 3, fat: 1.8, sodium: 15 },
+      { mealId: breakfast.id, foodName: "계란", amount: 2, unit: "1개(50g)", calories: 156, carbs: 1.2, protein: 12.6, fat: 10.6, sodium: 124 },
+      { mealId: breakfast.id, foodName: "바나나", amount: 1, unit: "1개(120g)", calories: 105, carbs: 27, protein: 1.3, fat: 0.4, sodium: 1 },
     ],
   });
 
@@ -178,9 +178,9 @@ async function main() {
   });
   await prisma.foodEntry.createMany({
     data: [
-      { mealId: lunch.id, foodName: "닭가슴살", amount: 150, unit: "g", calories: 248, carbs: 0, protein: 46.5, fat: 5.4, sodium: 111 },
-      { mealId: lunch.id, foodName: "샐러드", amount: 200, unit: "g", calories: 50, carbs: 8, protein: 3, fat: 1, sodium: 30 },
-      { mealId: lunch.id, foodName: "현미밥", amount: 100, unit: "g", calories: 162, carbs: 35, protein: 2.3, fat: 1.4, sodium: 12 },
+      { mealId: lunch.id, foodName: "닭가슴살", amount: 1.5, unit: "100g", calories: 248, carbs: 0, protein: 46.5, fat: 5.4, sodium: 111 },
+      { mealId: lunch.id, foodName: "샐러드", amount: 1, unit: "200g", calories: 50, carbs: 8, protein: 3, fat: 1, sodium: 30 },
+      { mealId: lunch.id, foodName: "현미밥", amount: 0.77, unit: "130g", calories: 162, carbs: 35, protein: 2.3, fat: 1.4, sodium: 12 },
     ],
   });
 
@@ -191,8 +191,8 @@ async function main() {
     data: {
       mealId: snack.id,
       foodName: "그릭요거트",
-      amount: 150,
-      unit: "g",
+      amount: 1,
+      unit: "150g",
       calories: 130,
       carbs: 8,
       protein: 15,

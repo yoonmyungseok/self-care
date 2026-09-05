@@ -11,7 +11,7 @@ import { Modal, ConfirmDialog } from "@/components/ui/Modal";
 import { LoadingSpinner, EmptyState } from "@/components/ui/Loading";
 import { RunningDistanceChart } from "@/components/charts/Charts";
 import { useToast } from "@/components/ui/Toast";
-import { formatPace, calculatePaceSeconds } from "@/lib/calculations/running";
+import { formatPace, calculatePaceSeconds, formatDistanceChange } from "@/lib/calculations/running";
 import { formatDisplayDate, formatDuration, parseDurationToSeconds, todayString } from "@/lib/utils";
 import { RUNNING_TYPES, getRunningTypeLabel } from "@/lib/constants";
 
@@ -42,8 +42,12 @@ interface RunningStats {
   monthDistance: number;
   last7DaysDistance: number;
   last30DaysDistance: number;
-  totalCount: number;
-  averagePace: number | null;
+  weekCount: number;
+  monthCount: number;
+  recent30AveragePace: number | null;
+  longestRun: { distance: number; date: string } | null;
+  lastWeekDistance: number;
+  weekOverWeekChange: number;
 }
 
 const emptyForm = {
@@ -221,13 +225,27 @@ export default function RunningPage() {
       </div>
 
       {stats && (
-        <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <StatCard label="이번 주" value={`${stats.weekDistance.toFixed(1)} km`} />
           <StatCard label="이번 달" value={`${stats.monthDistance.toFixed(1)} km`} />
-          <StatCard label="총 횟수" value={`${stats.totalCount}회`} />
           <StatCard
-            label="평균 페이스"
-            value={formatPace(stats.averagePace)}
+            label="이번 주 횟수"
+            value={`${stats.weekCount}회`}
+            subValue={`이번 달 ${stats.monthCount}회`}
+          />
+          <StatCard
+            label="최근 30일 페이스"
+            value={formatPace(stats.recent30AveragePace)}
+          />
+          <StatCard
+            label="최장 거리 (PR)"
+            value={stats.longestRun ? `${stats.longestRun.distance.toFixed(1)} km` : "-"}
+            subValue={stats.longestRun ? formatDisplayDate(stats.longestRun.date) : undefined}
+          />
+          <StatCard
+            label="지난주 대비"
+            value={formatDistanceChange(stats.weekOverWeekChange)}
+            subValue={`이번 주 ${stats.weekDistance.toFixed(1)}km · 지난주 ${stats.lastWeekDistance.toFixed(1)}km`}
           />
         </div>
       )}

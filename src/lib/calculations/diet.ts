@@ -55,10 +55,10 @@ export function calculateNutritionSummary(
 
 export function scaleNutrition(
   base: NutritionEntry & { sodium?: number | null },
-  amount: number,
+  quantity: number,
   standardAmount: number = 1,
 ): NutritionEntry & { sodium: number } {
-  const ratio = amount / standardAmount;
+  const ratio = quantity / standardAmount;
   return {
     calories: base.calories * ratio,
     carbs: base.carbs * ratio,
@@ -66,4 +66,20 @@ export function scaleNutrition(
     fat: base.fat * ratio,
     sodium: (base.sodium ?? 0) * ratio,
   };
+}
+
+export function formatConsumptionDisplay(
+  quantity: number,
+  standardAmount: string,
+): string {
+  return `${standardAmount} × ${quantity}`;
+}
+
+export function deriveQuantityFromEntry(
+  entry: NutritionEntry,
+  foodItem: NutritionEntry,
+): number {
+  if (foodItem.calories <= 0) return 1;
+  const ratio = entry.calories / foodItem.calories;
+  return Math.round(ratio * 100) / 100;
 }

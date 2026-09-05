@@ -55,10 +55,14 @@ export const foodItemSchema = z.object({
 
 export const settingsSchema = z.object({
   targetWeight: z.number().positive("목표 체중은 0보다 커야 합니다"),
-  targetCalories: z.number().positive("목표 칼로리는 0보다 커야 합니다"),
-  targetCarbs: z.number().nonnegative("목표 탄수화물은 0 이상이어야 합니다"),
-  targetProtein: z.number().nonnegative("목표 단백질은 0 이상이어야 합니다"),
-  targetFat: z.number().nonnegative("목표 지방은 0 이상이어야 합니다"),
+  birthYear: z
+    .number()
+    .int()
+    .min(1900, "올바른 출생년도를 입력해주세요")
+    .max(new Date().getFullYear(), "올바른 출생년도를 입력해주세요"),
+  gender: z.enum(["male", "female"]),
+  heightCm: z.number().positive("키는 0보다 커야 합니다"),
+  activityLevel: z.enum(["sedentary", "light", "moderate", "active", "very_active"]),
 });
 
 export type WeightRecordInput = z.infer<typeof weightRecordSchema>;

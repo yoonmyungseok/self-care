@@ -7,7 +7,7 @@ import { StatCard } from "@/components/ui/StatCard";
 import { ProgressBar } from "@/components/ui/ProgressBar";
 import { LoadingSpinner } from "@/components/ui/Loading";
 import { WeightChart, RunningDistanceChart } from "@/components/charts/Charts";
-import { formatWeightChange } from "@/lib/calculations/weight";
+import { formatWeightChange, getWeightChangeClassName, getWeightChangeTrend } from "@/lib/calculations/weight";
 import { formatPace } from "@/lib/calculations/running";
 import { formatDisplayDate } from "@/lib/utils";
 import { getRunningTypeLabel, getMealTypeLabel } from "@/lib/constants";
@@ -15,6 +15,7 @@ import { getRunningTypeLabel, getMealTypeLabel } from "@/lib/constants";
 interface DashboardData {
   weight: {
     current: number | null;
+    changeFromPrevious: number | null;
     change7Days: number | null;
     change30Days: number | null;
     targetWeight: number;
@@ -55,6 +56,7 @@ interface DashboardData {
     id: number;
     date: string;
     weight: number;
+    changeFromPrevious: number | null;
   }[];
   todayMeals: {
     id: number;
@@ -105,16 +107,23 @@ export default function DashboardPage() {
           <StatCard
             label="현재 체중"
             value={data.weight.current != null ? `${data.weight.current.toFixed(1)} kg` : "-"}
-            subValue={formatWeightChange(data.weight.change7Days) + " (7일)"}
-            trend={
-              data.weight.change7Days != null
-                ? data.weight.change7Days > 0
-                  ? "up"
-                  : data.weight.change7Days < 0
-                    ? "down"
-                    : "neutral"
-                : undefined
+            subValue={
+              data.weight.changeFromPrevious != null
+                ? `전일 ${formatWeightChange(data.weight.changeFromPrevious)}`
+                : formatWeightChange(data.weight.change7Days) + " (7일)"
             }
+            trend={
+              data.weight.changeFromPrevious != null
+                ? getWeightChangeTrend(data.weight.changeFromPrevious)
+                : data.weight.change7Days != null
+                  ? data.weight.change7Days > 0
+                    ? "up"
+                    : data.weight.change7Days < 0
+                      ? "down"
+                      : "neutral"
+                  : undefined
+            }
+            valueTrend={getWeightChangeTrend(data.weight.changeFromPrevious)}
           />
           <StatCard
             label="목표 체중"
@@ -195,7 +204,16 @@ export default function DashboardPage() {
                 {data.recentWeightRecords.map((r) => (
                   <li key={r.id} className="flex justify-between text-sm">
                     <span className="text-slate-500">{formatDisplayDate(r.date)}</span>
-                    <span className="font-medium">{r.weight.toFixed(1)} kg</span>
+                    <span
+                      className={`rounded-md px-2 py-0.5 font-medium ${getWeightChangeClassName(r.changeFromPrevious)}`}
+                    >
+                      {r.weight.toFixed(1)} kg
+                      {r.changeFromPrevious != null && (
+                        <span className="ml-1.5 text-xs font-normal opacity-80">
+                          {formatWeightChange(r.changeFromPrevious)}
+                        </span>
+                      )}
+                    </span>
                   </li>
                 ))}
               </ul>

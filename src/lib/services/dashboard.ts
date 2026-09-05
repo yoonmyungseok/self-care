@@ -1,7 +1,7 @@
 import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, subDays } from "date-fns";
 import { prisma } from "@/lib/db";
 import { getSettings } from "@/lib/services/settings";
-import { calculateWeightStats, getWeightChartData } from "@/lib/calculations/weight";
+import { calculateWeightStats, getWeightChartData, buildWeightDayChanges } from "@/lib/calculations/weight";
 import { calculateAveragePace, sumDistance } from "@/lib/calculations/running";
 import { calculateNutritionSummary } from "@/lib/calculations/diet";
 import { todayString } from "@/lib/utils";
@@ -49,6 +49,7 @@ export async function getDashboardData() {
 
   const runningChartData = aggregateRunningByDate(last30Runs, last30Start, today);
   const weightChartData = getWeightChartData(weightRecords, 30, today);
+  const dayChanges = buildWeightDayChanges(weightRecords);
 
   return {
     targets: {
@@ -68,7 +69,10 @@ export async function getDashboardData() {
     },
     diet: nutrition,
     weightChartData,
-    recentWeightRecords: weightRecords.slice(0, 5),
+    recentWeightRecords: weightRecords.slice(0, 5).map((record) => ({
+      ...record,
+      changeFromPrevious: dayChanges.get(record.date) ?? null,
+    })),
     todayMeals,
   };
 }

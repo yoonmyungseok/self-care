@@ -1,8 +1,14 @@
-import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, subDays } from "date-fns";
+import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, subDays, subWeeks } from "date-fns";
 import { prisma } from "@/lib/db";
 import { errorResponse, jsonResponse } from "@/lib/utils";
 import { runningRecordSchema } from "@/lib/validations/schemas";
-import { calculatePaceSeconds, calculateAveragePace, sumDistance } from "@/lib/calculations/running";
+import {
+  calculatePaceSeconds,
+  calculateAveragePace,
+  sumDistance,
+  countRecords,
+  findLongestRun,
+} from "@/lib/calculations/running";
 
 export async function GET(request: Request) {
   try {
@@ -34,15 +40,32 @@ export async function GET(request: Request) {
     const monthStart = startOfMonth(new Date()).toISOString().slice(0, 10);
     const monthEnd = endOfMonth(new Date()).toISOString().slice(0, 10);
     const last7 = subDays(new Date(), 7).toISOString().slice(0, 10);
-    const last30 = subDays(new Date(), 30).toISOString().slice(0, 10);
+    const last30Start = subDays(new Date(), 29).toISOString().slice(0, 10);
+    const lastWeekStart = startOfWeek(subWeeks(new Date(), 1), { weekStartsOn: 1 })
+      .toISOString()
+      .slice(0, 10);
+    const lastWeekEnd = endOfWeek(subWeeks(new Date(), 1), { weekStartsOn: 1 })
+      .toISOString()
+      .slice(0, 10);
+
+    const weekRecords = records.filter((r) => r.date >= weekStart && r.date <= weekEnd);
+    const lastWeekRecords = records.filter((r) => r.date >= lastWeekStart && r.date <= lastWeekEnd);
+    const recent30Records = records.filter((r) => r.date >= last30Start && r.date <= today);
+
+    const weekDistance = sumDistance(weekRecords);
+    const lastWeekDistance = sumDistance(lastWeekRecords);
 
     const stats = {
-      weekDistance: sumDistance(records.filter((r) => r.date >= weekStart && r.date <= weekEnd)),
+      weekDistance,
       monthDistance: sumDistance(records.filter((r) => r.date >= monthStart && r.date <= monthEnd)),
       last7DaysDistance: sumDistance(records.filter((r) => r.date >= last7)),
-      last30DaysDistance: sumDistance(records.filter((r) => r.date >= last30)),
-      totalCount: records.length,
-      averagePace: calculateAveragePace(records),
+      last30DaysDistance: sumDistance(recent30Records),
+      weekCount: countRecords(records, weekStart, weekEnd),
+      monthCount: countRecords(records, monthStart, monthEnd),
+      recent30AveragePace: calculateAveragePace(recent30Records),
+      longestRun: findLongestRun(records),
+      lastWeekDistance,
+      weekOverWeekChange: weekDistance - lastWeekDistance,
     };
 
     const chartStart = subDays(new Date(), days - 1).toISOString().slice(0, 10);

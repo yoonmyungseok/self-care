@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -11,7 +11,12 @@ import { Modal, ConfirmDialog } from "@/components/ui/Modal";
 import { LoadingSpinner, EmptyState } from "@/components/ui/Loading";
 import { WeightChart } from "@/components/charts/Charts";
 import { useToast } from "@/components/ui/Toast";
-import { formatWeightChange } from "@/lib/calculations/weight";
+import {
+  buildWeightDayChanges,
+  formatWeightChange,
+  getWeightChangeClassName,
+  getWeightChangeTrend,
+} from "@/lib/calculations/weight";
 import { formatDisplayDate, todayString } from "@/lib/utils";
 import { CONDITION_OPTIONS, BOWEL_OPTIONS } from "@/lib/constants";
 
@@ -60,6 +65,8 @@ export default function WeightPage() {
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
+
+  const dayChanges = useMemo(() => buildWeightDayChanges(records), [records]);
 
   const fetchData = useCallback(async () => {
     const res = await fetch("/api/weight?days=30");
@@ -168,6 +175,13 @@ export default function WeightPage() {
           <StatCard
             label="현재 체중"
             value={stats.current != null ? `${stats.current.toFixed(1)} kg` : "-"}
+            subValue={
+              stats.changeFromPrevious != null
+                ? `전일 ${formatWeightChange(stats.changeFromPrevious)}`
+                : undefined
+            }
+            trend={getWeightChangeTrend(stats.changeFromPrevious)}
+            valueTrend={getWeightChangeTrend(stats.changeFromPrevious)}
           />
           <StatCard
             label="목표까지"
@@ -181,10 +195,12 @@ export default function WeightPage() {
           <StatCard
             label="7일 변화"
             value={formatWeightChange(stats.change7Days)}
+            valueTrend={getWeightChangeTrend(stats.change7Days)}
           />
           <StatCard
             label="30일 변화"
             value={formatWeightChange(stats.change30Days)}
+            valueTrend={getWeightChangeTrend(stats.change30Days)}
           />
         </div>
       )}
@@ -210,10 +226,25 @@ export default function WeightPage() {
                 </tr>
               </thead>
               <tbody>
-                {records.map((r) => (
-                  <tr key={r.id} className="border-b border-slate-100">
+                {records.map((r) => {
+                  const change = dayChanges.get(r.date) ?? null;
+                  const changeClassName = getWeightChangeClassName(change);
+
+                  return (
+                    <tr key={r.id} className="border-b border-slate-100">
                     <td className="py-3 pr-4">{formatDisplayDate(r.date)}</td>
-                    <td className="py-3 pr-4 font-medium">{r.weight.toFixed(1)} kg</td>
+                    <td className="py-3 pr-4">
+                      <span
+                        className={`inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 font-medium ${changeClassName}`}
+                      >
+                        {r.weight.toFixed(1)} kg
+                        {change != null && (
+                          <span className="text-xs font-normal opacity-80">
+                            {formatWeightChange(change)}
+                          </span>
+                        )}
+                      </span>
+                    </td>
                     <td className="py-3 pr-4">{r.steps?.toLocaleString() ?? "-"}</td>
                     <td className="py-3 pr-4">{r.water != null ? `${r.water}L` : "-"}</td>
                     <td className="py-3 pr-4">{r.sleep != null ? `${r.sleep}h` : "-"}</td>
@@ -234,8 +265,9 @@ export default function WeightPage() {
                         </Button>
                       </div>
                     </td>
-                  </tr>
-                ))}
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
