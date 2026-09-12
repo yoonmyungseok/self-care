@@ -20,8 +20,8 @@ export function Button({
   };
 
   const sizes = {
-    sm: "px-3 py-1.5 text-sm",
-    md: "px-4 py-2 text-sm",
+    sm: "min-h-0 px-3 py-1.5 text-sm",
+    md: "min-h-11 px-4 py-2.5 text-sm sm:min-h-0 sm:py-2",
   };
 
   return (

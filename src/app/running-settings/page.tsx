@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Modal, ConfirmDialog } from "@/components/ui/Modal";
 import { LoadingSpinner, EmptyState } from "@/components/ui/Loading";
+import { RecordCard, MobileRecordList } from "@/components/ui/RecordCard";
 import { useToast } from "@/components/ui/Toast";
 
 interface RunningType {
@@ -126,58 +127,94 @@ export default function RunningSettingsPage() {
 
   return (
     <AppLayout>
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">러닝 종류 설정</h1>
+          <h1 className="text-xl font-bold text-slate-900 sm:text-2xl">러닝 종류 설정</h1>
           <p className="text-sm text-slate-500">러닝 기록에 사용할 종류를 관리하세요</p>
         </div>
-        <Button onClick={openAdd}>종류 추가</Button>
+        <Button onClick={openAdd} className="w-full sm:w-auto">종류 추가</Button>
       </div>
 
       <Card>
         {runningTypes.length === 0 ? (
           <EmptyState message="등록된 러닝 종류가 없습니다" />
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-slate-200 text-left text-slate-500">
-                  <th className="pb-2 pr-4">표시 이름</th>
-                  <th className="pb-2 pr-4">식별값</th>
-                  <th className="pb-2 pr-4">통계 제외</th>
-                  <th className="pb-2 pr-4">순서</th>
-                  <th className="pb-2">작업</th>
-                </tr>
-              </thead>
-              <tbody>
-                {runningTypes.map((item) => (
-                  <tr key={item.id} className="border-b border-slate-100">
-                    <td className="py-3 pr-4 font-medium">{item.label}</td>
-                    <td className="py-3 pr-4 font-mono text-slate-600">{item.value}</td>
-                    <td className="py-3 pr-4">{item.excludeFromStats ? "예" : "아니오"}</td>
-                    <td className="py-3 pr-4">{item.sortOrder}</td>
-                    <td className="py-3">
-                      <div className="flex gap-2">
-                        <Button variant="ghost" size="sm" onClick={() => openEdit(item)}>
-                          수정
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            setDeleteId(item.id);
-                            setConfirmOpen(true);
-                          }}
-                        >
-                          삭제
-                        </Button>
-                      </div>
-                    </td>
+          <>
+            <div className="hidden overflow-x-auto lg:block">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-slate-200 text-left text-slate-500">
+                    <th className="pb-2 pr-4">표시 이름</th>
+                    <th className="pb-2 pr-4">식별값</th>
+                    <th className="pb-2 pr-4">통계 제외</th>
+                    <th className="pb-2 pr-4">순서</th>
+                    <th className="pb-2">작업</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {runningTypes.map((item) => (
+                    <tr key={item.id} className="border-b border-slate-100">
+                      <td className="py-3 pr-4 font-medium">{item.label}</td>
+                      <td className="py-3 pr-4 font-mono text-slate-600">{item.value}</td>
+                      <td className="py-3 pr-4">{item.excludeFromStats ? "예" : "아니오"}</td>
+                      <td className="py-3 pr-4">{item.sortOrder}</td>
+                      <td className="py-3">
+                        <div className="flex gap-2">
+                          <Button variant="ghost" size="sm" onClick={() => openEdit(item)}>
+                            수정
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setDeleteId(item.id);
+                              setConfirmOpen(true);
+                            }}
+                          >
+                            삭제
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <MobileRecordList>
+              {runningTypes.map((item) => (
+                <RecordCard
+                  key={item.id}
+                  title={item.label}
+                  highlight={
+                    <span className="text-sm text-slate-600">
+                      통계 제외: {item.excludeFromStats ? "예" : "아니오"}
+                    </span>
+                  }
+                  fields={[
+                    { label: "식별값", value: <span className="font-mono">{item.value}</span> },
+                    { label: "순서", value: item.sortOrder },
+                  ]}
+                  actions={
+                    <>
+                      <Button variant="ghost" size="sm" onClick={() => openEdit(item)}>
+                        수정
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setDeleteId(item.id);
+                          setConfirmOpen(true);
+                        }}
+                      >
+                        삭제
+                      </Button>
+                    </>
+                  }
+                />
+              ))}
+            </MobileRecordList>
+          </>
         )}
       </Card>
 
@@ -207,14 +244,14 @@ export default function RunningSettingsPage() {
             onChange={(e) => setForm({ ...form, sortOrder: e.target.value })}
             required
           />
-          <label className="flex items-center gap-2 text-sm text-slate-700">
+          <label className="flex min-h-11 cursor-pointer items-center gap-3 rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 active:bg-slate-50">
             <input
               type="checkbox"
               checked={form.excludeFromStats}
               onChange={(e) => setForm({ ...form, excludeFromStats: e.target.checked })}
-              className="rounded border-slate-300"
+              className="size-5 shrink-0 rounded border-slate-300"
             />
-            통계에서 제외 (휴식일 등)
+            <span>통계에서 제외 (휴식일 등)</span>
           </label>
           {form.excludeFromStats && (
             <p className="text-sm text-slate-500">
@@ -222,13 +259,18 @@ export default function RunningSettingsPage() {
             </p>
           )}
         </div>
-        <div className="mt-6 flex justify-end gap-2">
-          <Button variant="secondary" onClick={() => setModalOpen(false)}>
+        <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <Button
+            variant="secondary"
+            onClick={() => setModalOpen(false)}
+            className="w-full sm:w-auto"
+          >
             취소
           </Button>
           <Button
             onClick={handleSave}
             disabled={saving || !form.label.trim() || !form.value.trim()}
+            className="w-full sm:w-auto"
           >
             {saving ? "저장 중..." : "저장"}
           </Button>

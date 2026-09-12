@@ -14,12 +14,14 @@ export function StatCard({ label, value, subValue, trend, valueTrend }: StatCard
   const valueColor = getWeightTrendColorClass(valueTrend);
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+    <div className="min-w-0 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
       <p className="text-sm text-slate-500">{label}</p>
-      <p className={`mt-1 text-2xl font-bold ${valueTrend ? valueColor : "text-slate-900"}`}>
+      <p
+        className={`mt-1 break-words text-xl font-bold sm:text-2xl ${valueTrend ? valueColor : "text-slate-900"}`}
+      >
         {value}
       </p>
-      {subValue && <p className={`mt-1 text-sm ${trendColor}`}>{subValue}</p>}
+      {subValue && <p className={`mt-1 break-words text-sm ${trendColor}`}>{subValue}</p>}
     </div>
   );
 }

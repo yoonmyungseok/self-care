@@ -14,16 +14,23 @@ export function Modal({ open, onClose, title, children, size = "md" }: ModalProp
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-end justify-center p-0 sm:items-center sm:p-4">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
       <div
-        className={`relative max-h-[90vh] w-full overflow-y-auto rounded-xl bg-white p-6 shadow-xl ${
+        className={`relative max-h-[85vh] w-full overflow-y-auto rounded-t-xl bg-white p-4 shadow-xl sm:max-h-[90vh] sm:rounded-xl sm:p-6 ${
           size === "lg" ? "max-w-2xl" : "max-w-lg"
         }`}
       >
-        <div className="mb-4 flex items-center justify-between">
+        <div className="mb-4 flex items-center justify-between gap-3">
           <h2 className="text-lg font-semibold text-slate-900">{title}</h2>
-          <Button variant="ghost" size="sm" onClick={onClose} type="button">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onClose}
+            type="button"
+            aria-label="닫기"
+            className="min-h-11 min-w-11 shrink-0 text-lg sm:min-h-0 sm:min-w-0 sm:text-sm"
+          >
             ✕
           </Button>
         </div>
@@ -53,7 +60,7 @@ export function ConfirmDialog({
   return (
     <Modal open={open} onClose={onClose} title={title}>
       <p className="mb-6 text-sm text-slate-600">{message}</p>
-      <div className="flex justify-end gap-2">
+      <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
         <Button variant="secondary" onClick={onClose} disabled={loading}>
           취소
         </Button>

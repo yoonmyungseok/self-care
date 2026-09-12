@@ -75,7 +75,11 @@ export const runningRecordSchema = runningRecordBaseSchema.superRefine((data, ct
   const result = validateRunningRecord(data);
   if (!result.success) {
     for (const issue of result.error.issues) {
-      ctx.addIssue(issue);
+      ctx.addIssue({
+        code: "custom",
+        message: issue.message,
+        path: issue.path,
+      });
     }
   }
 });

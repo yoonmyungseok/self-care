@@ -9,6 +9,7 @@ import { Select } from "@/components/ui/Select";
 import { StatCard } from "@/components/ui/StatCard";
 import { Modal, ConfirmDialog } from "@/components/ui/Modal";
 import { LoadingSpinner, EmptyState } from "@/components/ui/Loading";
+import { RecordCard, MobileRecordList } from "@/components/ui/RecordCard";
 import { RunningDistanceChart } from "@/components/charts/Charts";
 import { useToast } from "@/components/ui/Toast";
 import { formatPace, calculatePaceSeconds, formatDistanceChange } from "@/lib/calculations/running";
@@ -308,16 +309,18 @@ export default function RunningPage() {
 
   return (
     <AppLayout>
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">러닝 기록</h1>
+          <h1 className="text-xl font-bold text-slate-900 sm:text-2xl">러닝 기록</h1>
           <p className="text-sm text-slate-500">러닝 활동을 기록하고 분석하세요</p>
         </div>
-        <Button onClick={openCreate}>+ 기록 추가</Button>
+        <Button onClick={openCreate} className="w-full sm:w-auto">
+          + 기록 추가
+        </Button>
       </div>
 
       {stats && (
-        <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <StatCard label="이번 주" value={`${stats.weekDistance.toFixed(1)} km`} />
           <StatCard label="이번 달" value={`${stats.monthDistance.toFixed(1)} km`} />
           <StatCard
@@ -350,34 +353,86 @@ export default function RunningPage() {
         {records.length === 0 ? (
           <EmptyState message="아직 러닝 기록이 없습니다." />
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-slate-200 text-left text-slate-500">
-                  <th className="pb-2 pr-4">날짜</th>
-                  <th className="pb-2 pr-4">종류</th>
-                  <th className="pb-2 pr-4">거리</th>
-                  <th className="pb-2 pr-4">시간</th>
-                  <th className="pb-2 pr-4">페이스</th>
-                  <th className="pb-2">작업</th>
-                </tr>
-              </thead>
-              <tbody>
-                {records.map((r) => (
-                  <tr key={r.id} className="border-b border-slate-100">
-                    <td className="py-3 pr-4">{formatDisplayDate(r.date)}</td>
-                    <td className="py-3 pr-4">{getRunningTypeLabel(r.type, typeOptions)}</td>
-                    <td className="py-3 pr-4 font-medium">
-                      {isRestDay(r.type, restDayValues) ? "-" : `${r.distance.toFixed(1)} km`}
-                    </td>
-                    <td className="py-3 pr-4">
-                      {isRestDay(r.type, restDayValues) ? "-" : formatDuration(r.durationSeconds)}
-                    </td>
-                    <td className="py-3 pr-4">
-                      {isRestDay(r.type, restDayValues) ? "-" : formatPace(r.avgPaceSeconds)}
-                    </td>
-                    <td className="py-3">
-                      <div className="flex gap-2">
+          <>
+            <div className="hidden overflow-x-auto lg:block">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-slate-200 text-left text-slate-500">
+                    <th className="pb-2 pr-4">날짜</th>
+                    <th className="pb-2 pr-4">종류</th>
+                    <th className="pb-2 pr-4">거리</th>
+                    <th className="pb-2 pr-4">시간</th>
+                    <th className="pb-2 pr-4">페이스</th>
+                    <th className="pb-2">작업</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {records.map((r) => (
+                    <tr key={r.id} className="border-b border-slate-100">
+                      <td className="py-3 pr-4">{formatDisplayDate(r.date)}</td>
+                      <td className="py-3 pr-4">{getRunningTypeLabel(r.type, typeOptions)}</td>
+                      <td className="py-3 pr-4 font-medium">
+                        {isRestDay(r.type, restDayValues) ? "-" : `${r.distance.toFixed(1)} km`}
+                      </td>
+                      <td className="py-3 pr-4">
+                        {isRestDay(r.type, restDayValues) ? "-" : formatDuration(r.durationSeconds)}
+                      </td>
+                      <td className="py-3 pr-4">
+                        {isRestDay(r.type, restDayValues) ? "-" : formatPace(r.avgPaceSeconds)}
+                      </td>
+                      <td className="py-3">
+                        <div className="flex gap-2">
+                          <Button variant="ghost" size="sm" onClick={() => copyRecord(r)}>
+                            복사
+                          </Button>
+                          <Button variant="ghost" size="sm" onClick={() => openEdit(r)}>
+                            수정
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setDeleteId(r.id);
+                              setConfirmOpen(true);
+                            }}
+                          >
+                            삭제
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <MobileRecordList>
+              {records.map((r) => {
+                const rest = isRestDay(r.type, restDayValues);
+
+                return (
+                  <RecordCard
+                    key={r.id}
+                    title={formatDisplayDate(r.date)}
+                    highlight={
+                      <span className="text-base font-medium text-slate-800">
+                        {getRunningTypeLabel(r.type, typeOptions)}
+                        {!rest && (
+                          <span className="ml-2 text-slate-600">
+                            {r.distance.toFixed(1)} km
+                          </span>
+                        )}
+                      </span>
+                    }
+                    fields={
+                      rest
+                        ? undefined
+                        : [
+                            { label: "시간", value: formatDuration(r.durationSeconds) },
+                            { label: "페이스", value: formatPace(r.avgPaceSeconds) },
+                          ]
+                    }
+                    actions={
+                      <>
                         <Button variant="ghost" size="sm" onClick={() => copyRecord(r)}>
                           복사
                         </Button>
@@ -394,13 +449,13 @@ export default function RunningPage() {
                         >
                           삭제
                         </Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                      </>
+                    }
+                  />
+                );
+              })}
+            </MobileRecordList>
+          </>
         )}
       </Card>
 
@@ -410,7 +465,7 @@ export default function RunningPage() {
         title={editingId ? "러닝 기록 수정" : "러닝 기록 추가"}
         size="lg"
       >
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Input
             label="날짜"
             type="date"
@@ -483,64 +538,79 @@ export default function RunningPage() {
 
         {!isRest && (
         <div className="mt-6">
-          <div className="mb-2 flex items-center justify-between">
+          <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <h3 className="text-sm font-semibold text-slate-700">구간별 기록</h3>
-            <Button variant="secondary" size="sm" onClick={addSplit}>
+            <Button variant="secondary" size="sm" onClick={addSplit} className="w-full sm:w-auto">
               + 구간 추가
             </Button>
           </div>
-          {splits.map((split, index) => (
-            <div key={index} className="mb-2 grid grid-cols-6 gap-2">
-              <Input
-                label={`구간 ${split.splitNumber}`}
-                type="number"
-                step="0.1"
-                placeholder="거리(km)"
-                value={split.distance}
-                onChange={(e) => updateSplit(index, "distance", e.target.value)}
-              />
-              <Input
-                label="시간"
-                placeholder="MM:SS"
-                value={split.duration}
-                onChange={(e) => updateSplit(index, "duration", e.target.value)}
-              />
-              <Input
-                label="심박수"
-                type="number"
-                value={split.heartRate}
-                onChange={(e) => updateSplit(index, "heartRate", e.target.value)}
-              />
-              <Input
-                label="케이던스"
-                type="number"
-                value={split.cadence}
-                onChange={(e) => updateSplit(index, "cadence", e.target.value)}
-              />
-              <div className="flex items-end pb-2 text-sm text-slate-500">
-                {(() => {
-                  const d = parseFloat(split.distance);
-                  const dur = parseDurationToSeconds(split.duration);
-                  return dur && d ? formatPace(calculatePaceSeconds(d, dur)) : "-";
-                })()}
+          {splits.map((split, index) => {
+            const d = parseFloat(split.distance);
+            const dur = parseDurationToSeconds(split.duration);
+            const splitPace = dur && d ? formatPace(calculatePaceSeconds(d, dur)) : "-";
+
+            return (
+              <div
+                key={index}
+                className="mb-3 rounded-lg border border-slate-200 bg-slate-50 p-3"
+              >
+                <div className="mb-3 flex items-center justify-between">
+                  <span className="text-sm font-semibold text-slate-700">
+                    구간 {split.splitNumber}
+                  </span>
+                  <Button variant="ghost" size="sm" onClick={() => removeSplit(index)}>
+                    삭제
+                  </Button>
+                </div>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <Input
+                    label="거리 (km)"
+                    type="number"
+                    step="0.1"
+                    placeholder="0.0"
+                    value={split.distance}
+                    onChange={(e) => updateSplit(index, "distance", e.target.value)}
+                  />
+                  <Input
+                    label="시간"
+                    placeholder="MM:SS"
+                    value={split.duration}
+                    onChange={(e) => updateSplit(index, "duration", e.target.value)}
+                  />
+                  <Input
+                    label="심박수"
+                    type="number"
+                    value={split.heartRate}
+                    onChange={(e) => updateSplit(index, "heartRate", e.target.value)}
+                  />
+                  <Input
+                    label="케이던스"
+                    type="number"
+                    value={split.cadence}
+                    onChange={(e) => updateSplit(index, "cadence", e.target.value)}
+                  />
+                </div>
+                <div className="mt-3 border-t border-slate-200 pt-2 text-sm text-slate-500">
+                  페이스: <strong className="text-slate-700">{splitPace}</strong>
+                </div>
               </div>
-              <div className="flex items-end">
-                <Button variant="ghost" size="sm" onClick={() => removeSplit(index)}>
-                  삭제
-                </Button>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
         )}
 
-        <div className="mt-6 flex justify-end gap-2">
-          <Button variant="secondary" onClick={() => setModalOpen(false)}>
+        <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <Button
+            variant="secondary"
+            onClick={() => setModalOpen(false)}
+            className="w-full sm:w-auto"
+          >
             취소
           </Button>
           <Button
             onClick={handleSave}
             disabled={saving || (!isRest && (!form.distance || !form.duration))}
+            className="w-full sm:w-auto"
           >
             {saving ? "저장 중..." : "저장"}
           </Button>

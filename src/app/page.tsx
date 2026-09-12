@@ -105,7 +105,7 @@ export default function DashboardPage() {
   return (
     <AppLayout>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-slate-900">Dashboard</h1>
+        <h1 className="text-xl font-bold text-slate-900 sm:text-2xl">Dashboard</h1>
         <p className="text-sm text-slate-500">오늘의 건강 상태를 한눈에 확인하세요</p>
       </div>
 
@@ -113,7 +113,7 @@ export default function DashboardPage() {
         <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500">
           오늘의 요약
         </h2>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
           <StatCard
             label="현재 체중"
             value={data.weight.current != null ? `${data.weight.current.toFixed(1)} kg` : "-"}
@@ -162,12 +162,16 @@ export default function DashboardPage() {
         </div>
       </section>
 
-      <div className="mb-6 grid gap-6 lg:grid-cols-2">
+      <div className="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
         <Card title="체중 변화 (최근 30일)">
-          <WeightChart data={data.weightChartData} />
+          <div className="h-[220px] sm:h-[280px] [&_.recharts-responsive-container]:!h-full">
+            <WeightChart data={data.weightChartData} />
+          </div>
         </Card>
         <Card title="러닝 거리 (최근 30일)">
-          <RunningDistanceChart data={data.running.chartData} />
+          <div className="h-[220px] sm:h-[280px] [&_.recharts-responsive-container]:!h-full">
+            <RunningDistanceChart data={data.running.chartData} />
+          </div>
         </Card>
       </div>
 
@@ -205,17 +209,20 @@ export default function DashboardPage() {
         <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500">
           최근 기록
         </h2>
-        <div className="grid gap-6 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
           <Card title="최근 체중">
             {data.recentWeightRecords.length === 0 ? (
               <p className="text-sm text-slate-500">기록이 없습니다</p>
             ) : (
               <ul className="space-y-2">
                 {data.recentWeightRecords.map((r) => (
-                  <li key={r.id} className="flex justify-between text-sm">
-                    <span className="text-slate-500">{formatDisplayDate(r.date)}</span>
+                  <li
+                    key={r.id}
+                    className="flex flex-col gap-1 text-sm sm:flex-row sm:items-center sm:justify-between sm:gap-2"
+                  >
+                    <span className="shrink-0 text-slate-500">{formatDisplayDate(r.date)}</span>
                     <span
-                      className={`rounded-md px-2 py-0.5 font-medium ${getWeightChangeClassName(r.changeFromPrevious)}`}
+                      className={`break-words rounded-md px-2 py-0.5 font-medium sm:text-right ${getWeightChangeClassName(r.changeFromPrevious)}`}
                     >
                       {r.weight.toFixed(1)} kg
                       {r.changeFromPrevious != null && (
@@ -235,14 +242,17 @@ export default function DashboardPage() {
             ) : (
               <ul className="space-y-2">
                 {data.running.recentRecords.map((r) => (
-                  <li key={r.id} className="flex justify-between text-sm">
-                    <span>
+                  <li
+                    key={r.id}
+                    className="flex flex-col gap-1 text-sm sm:flex-row sm:items-start sm:justify-between sm:gap-2"
+                  >
+                    <span className="min-w-0 break-words">
                       <span className="text-slate-500">{formatDisplayDate(r.date)}</span>
                       <span className="ml-2 text-slate-400">
                         {getRunningTypeLabel(r.type, typeOptions)}
                       </span>
                     </span>
-                    <span className="font-medium">
+                    <span className="break-words font-medium sm:shrink-0 sm:text-right">
                       {isRestDay(r.type, restDayValues)
                         ? getRunningTypeLabel(r.type, typeOptions)
                         : `${r.distance.toFixed(1)} km · ${formatPace(r.avgPaceSeconds)}`}
@@ -263,9 +273,14 @@ export default function DashboardPage() {
                       {getMealTypeLabel(meal.mealType)}
                     </p>
                     {meal.foodEntries.map((f) => (
-                      <div key={f.id} className="flex justify-between text-sm">
-                        <span>{f.foodName}</span>
-                        <span className="text-slate-500">{f.calories.toFixed(0)} kcal</span>
+                      <div
+                        key={f.id}
+                        className="flex flex-col gap-0.5 text-sm sm:flex-row sm:justify-between sm:gap-2"
+                      >
+                        <span className="min-w-0 break-words">{f.foodName}</span>
+                        <span className="shrink-0 text-slate-500 sm:text-right">
+                          {f.calories.toFixed(0)} kcal
+                        </span>
                       </div>
                     ))}
                   </li>

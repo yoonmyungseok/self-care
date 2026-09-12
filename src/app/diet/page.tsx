@@ -10,6 +10,7 @@ import { StatCard } from "@/components/ui/StatCard";
 import { ProgressBar } from "@/components/ui/ProgressBar";
 import { Modal, ConfirmDialog } from "@/components/ui/Modal";
 import { LoadingSpinner, EmptyState } from "@/components/ui/Loading";
+import { RecordCard, MobileRecordList } from "@/components/ui/RecordCard";
 import { useToast } from "@/components/ui/Toast";
 import { MEAL_TYPES } from "@/lib/constants";
 import { todayString } from "@/lib/utils";
@@ -291,24 +292,27 @@ export default function DietPage() {
 
   return (
     <AppLayout>
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">식단 관리</h1>
+          <h1 className="text-xl font-bold text-slate-900 sm:text-2xl">식단 관리</h1>
           <p className="text-sm text-slate-500">하루 식사와 영양소를 기록하세요</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center">
           <Input
             type="date"
             value={selectedDate}
             onChange={(e) => setSelectedDate(e.target.value)}
+            className="w-full"
           />
-          <Button onClick={() => openCreate()}>+ 음식 추가</Button>
+          <Button onClick={() => openCreate()} className="w-full shrink-0 sm:w-auto">
+            + 음식 추가
+          </Button>
         </div>
       </div>
 
       {summary && targets && (
         <>
-          <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <StatCard
               label="섭취 칼로리"
               value={`${summary.calories.toFixed(0)} kcal`}
@@ -370,7 +374,12 @@ export default function DietPage() {
             title={mealType.label}
             className="mb-4"
             action={
-              <Button variant="secondary" size="sm" onClick={() => openCreate(mealType.value)}>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => openCreate(mealType.value)}
+                className="w-full sm:w-auto"
+              >
                 + 추가
               </Button>
             }
@@ -378,54 +387,100 @@ export default function DietPage() {
             {entries.length === 0 ? (
               <EmptyState message={`${mealType.label} 기록이 없습니다`} />
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-slate-200 text-left text-slate-500">
-                      <th className="pb-2 pr-4">음식</th>
-                      <th className="pb-2 pr-4">섭취량</th>
-                      <th className="pb-2 pr-4">칼로리</th>
-                      <th className="pb-2 pr-4">탄/단/지</th>
-                      <th className="pb-2">작업</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {entries.map((entry) => (
-                      <tr key={entry.id} className="border-b border-slate-100">
-                        <td className="py-3 pr-4 font-medium">{entry.foodName}</td>
-                        <td className="py-3 pr-4">
-                          {getEntryDisplayAmount(entry, foodItems)}
-                        </td>
-                        <td className="py-3 pr-4">{entry.calories.toFixed(0)} kcal</td>
-                        <td className="py-3 pr-4 text-slate-500">
-                          {entry.carbs.toFixed(0)}/{entry.protein.toFixed(0)}/{entry.fat.toFixed(0)}g
-                        </td>
-                        <td className="py-3">
-                          <div className="flex gap-2">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => openEdit(entry, mealType.value)}
-                            >
-                              수정
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => {
-                                setDeleteId(entry.id);
-                                setConfirmOpen(true);
-                              }}
-                            >
-                              삭제
-                            </Button>
-                          </div>
-                        </td>
+              <>
+                <div className="hidden overflow-x-auto lg:block">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-slate-200 text-left text-slate-500">
+                        <th className="pb-2 pr-4">음식</th>
+                        <th className="pb-2 pr-4">섭취량</th>
+                        <th className="pb-2 pr-4">칼로리</th>
+                        <th className="pb-2 pr-4">탄/단/지</th>
+                        <th className="pb-2">작업</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody>
+                      {entries.map((entry) => (
+                        <tr key={entry.id} className="border-b border-slate-100">
+                          <td className="py-3 pr-4 font-medium">{entry.foodName}</td>
+                          <td className="py-3 pr-4">
+                            {getEntryDisplayAmount(entry, foodItems)}
+                          </td>
+                          <td className="py-3 pr-4">{entry.calories.toFixed(0)} kcal</td>
+                          <td className="py-3 pr-4 text-slate-500">
+                            {entry.carbs.toFixed(0)}/{entry.protein.toFixed(0)}/{entry.fat.toFixed(0)}g
+                          </td>
+                          <td className="py-3">
+                            <div className="flex gap-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => openEdit(entry, mealType.value)}
+                              >
+                                수정
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  setDeleteId(entry.id);
+                                  setConfirmOpen(true);
+                                }}
+                              >
+                                삭제
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <MobileRecordList>
+                  {entries.map((entry) => (
+                    <RecordCard
+                      key={entry.id}
+                      title={entry.foodName}
+                      highlight={
+                        <span className="text-base font-medium text-slate-800">
+                          {entry.calories.toFixed(0)} kcal
+                        </span>
+                      }
+                      fields={[
+                        {
+                          label: "섭취량",
+                          value: getEntryDisplayAmount(entry, foodItems),
+                        },
+                        {
+                          label: "탄/단/지",
+                          value: `${entry.carbs.toFixed(0)}/${entry.protein.toFixed(0)}/${entry.fat.toFixed(0)}g`,
+                        },
+                      ]}
+                      actions={
+                        <>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => openEdit(entry, mealType.value)}
+                          >
+                            수정
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setDeleteId(entry.id);
+                              setConfirmOpen(true);
+                            }}
+                          >
+                            삭제
+                          </Button>
+                        </>
+                      }
+                    />
+                  ))}
+                </MobileRecordList>
+              </>
             )}
           </Card>
         );
@@ -453,7 +508,7 @@ export default function DietPage() {
             />
           </div>
         )}
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Select
             label="식사 구분"
             value={form.mealType}
@@ -502,7 +557,7 @@ export default function DietPage() {
           )}
           {selectedFoodItem ? (
             <div className="sm:col-span-2 rounded-lg border border-emerald-200 bg-emerald-50 p-4">
-              <p className="mb-2 text-sm font-medium text-emerald-800">
+              <p className="mb-2 break-words text-sm font-medium text-emerald-800">
                 {form.amount
                   ? formatConsumptionDisplay(
                       parseFloat(form.amount),
@@ -510,11 +565,13 @@ export default function DietPage() {
                     )
                   : `${selectedFoodItem.standardAmount} × ?`}
               </p>
-              <p className="text-sm text-emerald-700">
-                칼로리 {form.calories || "0"} kcal · 탄 {form.carbs || "0"}g · 단{" "}
-                {form.protein || "0"}g · 지 {form.fat || "0"}g
-                {form.sodium ? ` · 나트륨 ${form.sodium}mg` : ""}
-              </p>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm text-emerald-700 sm:flex sm:flex-wrap sm:gap-x-3">
+                <span>칼로리 {form.calories || "0"} kcal</span>
+                <span>탄 {form.carbs || "0"}g</span>
+                <span>단 {form.protein || "0"}g</span>
+                <span>지 {form.fat || "0"}g</span>
+                {form.sodium ? <span className="col-span-2 sm:col-span-1">나트륨 {form.sodium}mg</span> : null}
+              </div>
             </div>
           ) : (
             <>
@@ -550,17 +607,27 @@ export default function DietPage() {
               />
             </>
           )}
-          <Input
-            label="메모"
-            value={form.memo}
-            onChange={(e) => setForm({ ...form, memo: e.target.value })}
-          />
+          <div className="sm:col-span-2">
+            <Input
+              label="메모"
+              value={form.memo}
+              onChange={(e) => setForm({ ...form, memo: e.target.value })}
+            />
+          </div>
         </div>
-        <div className="mt-6 flex justify-end gap-2">
-          <Button variant="secondary" onClick={() => setModalOpen(false)}>
+        <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <Button
+            variant="secondary"
+            onClick={() => setModalOpen(false)}
+            className="w-full sm:w-auto"
+          >
             취소
           </Button>
-          <Button onClick={handleSave} disabled={saving || !form.foodName}>
+          <Button
+            onClick={handleSave}
+            disabled={saving || !form.foodName}
+            className="w-full sm:w-auto"
+          >
             {saving ? "저장 중..." : "저장"}
           </Button>
         </div>

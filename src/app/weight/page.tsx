@@ -9,6 +9,7 @@ import { Select } from "@/components/ui/Select";
 import { StatCard } from "@/components/ui/StatCard";
 import { Modal, ConfirmDialog } from "@/components/ui/Modal";
 import { LoadingSpinner, EmptyState } from "@/components/ui/Loading";
+import { RecordCard, MobileRecordList } from "@/components/ui/RecordCard";
 import { WeightChart } from "@/components/charts/Charts";
 import { useToast } from "@/components/ui/Toast";
 import {
@@ -162,16 +163,18 @@ export default function WeightPage() {
 
   return (
     <AppLayout>
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">체중 관리</h1>
+          <h1 className="text-xl font-bold text-slate-900 sm:text-2xl">체중 관리</h1>
           <p className="text-sm text-slate-500">체중과 건강 지표를 기록하세요</p>
         </div>
-        <Button onClick={openCreate}>+ 기록 추가</Button>
+        <Button onClick={openCreate} className="w-full sm:w-auto">
+          + 기록 추가
+        </Button>
       </div>
 
       {stats && (
-        <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <StatCard
             label="현재 체중"
             value={stats.current != null ? `${stats.current.toFixed(1)} kg` : "-"}
@@ -206,50 +209,102 @@ export default function WeightPage() {
       )}
 
       <Card title="체중 변화 그래프" className="mb-6">
-        <WeightChart data={chartData} />
+        <div className="h-[220px] sm:h-[280px] [&_.recharts-responsive-container]:!h-full">
+          <WeightChart data={chartData} />
+        </div>
       </Card>
 
       <Card title="기록 목록">
         {records.length === 0 ? (
           <EmptyState message="아직 체중 기록이 없습니다. 첫 기록을 추가해보세요." />
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-slate-200 text-left text-slate-500">
-                  <th className="pb-2 pr-4">날짜</th>
-                  <th className="pb-2 pr-4">체중</th>
-                  <th className="pb-2 pr-4">걸음수</th>
-                  <th className="pb-2 pr-4">수분</th>
-                  <th className="pb-2 pr-4">수면</th>
-                  <th className="pb-2">작업</th>
-                </tr>
-              </thead>
-              <tbody>
-                {records.map((r) => {
-                  const change = dayChanges.get(r.date) ?? null;
-                  const changeClassName = getWeightChangeClassName(change);
+          <>
+            <div className="hidden overflow-x-auto lg:block">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-slate-200 text-left text-slate-500">
+                    <th className="pb-2 pr-4">날짜</th>
+                    <th className="pb-2 pr-4">체중</th>
+                    <th className="pb-2 pr-4">걸음수</th>
+                    <th className="pb-2 pr-4">수분</th>
+                    <th className="pb-2 pr-4">수면</th>
+                    <th className="pb-2">작업</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {records.map((r) => {
+                    const change = dayChanges.get(r.date) ?? null;
+                    const changeClassName = getWeightChangeClassName(change);
 
-                  return (
-                    <tr key={r.id} className="border-b border-slate-100">
-                    <td className="py-3 pr-4">{formatDisplayDate(r.date)}</td>
-                    <td className="py-3 pr-4">
+                    return (
+                      <tr key={r.id} className="border-b border-slate-100">
+                        <td className="py-3 pr-4">{formatDisplayDate(r.date)}</td>
+                        <td className="py-3 pr-4">
+                          <span
+                            className={`inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 font-medium ${changeClassName}`}
+                          >
+                            {r.weight.toFixed(1)} kg
+                            {change != null && (
+                              <span className="text-xs font-normal opacity-80">
+                                {formatWeightChange(change)}
+                              </span>
+                            )}
+                          </span>
+                        </td>
+                        <td className="py-3 pr-4">{r.steps?.toLocaleString() ?? "-"}</td>
+                        <td className="py-3 pr-4">{r.water != null ? `${r.water}L` : "-"}</td>
+                        <td className="py-3 pr-4">{r.sleep != null ? `${r.sleep}h` : "-"}</td>
+                        <td className="py-3">
+                          <div className="flex gap-2">
+                            <Button variant="ghost" size="sm" onClick={() => openEdit(r)}>
+                              수정
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setDeleteId(r.id);
+                                setConfirmOpen(true);
+                              }}
+                            >
+                              삭제
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            <MobileRecordList>
+              {records.map((r) => {
+                const change = dayChanges.get(r.date) ?? null;
+                const changeClassName = getWeightChangeClassName(change);
+
+                return (
+                  <RecordCard
+                    key={r.id}
+                    title={formatDisplayDate(r.date)}
+                    highlight={
                       <span
-                        className={`inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 font-medium ${changeClassName}`}
+                        className={`inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-base font-medium ${changeClassName}`}
                       >
                         {r.weight.toFixed(1)} kg
                         {change != null && (
-                          <span className="text-xs font-normal opacity-80">
+                          <span className="text-sm font-normal opacity-80">
                             {formatWeightChange(change)}
                           </span>
                         )}
                       </span>
-                    </td>
-                    <td className="py-3 pr-4">{r.steps?.toLocaleString() ?? "-"}</td>
-                    <td className="py-3 pr-4">{r.water != null ? `${r.water}L` : "-"}</td>
-                    <td className="py-3 pr-4">{r.sleep != null ? `${r.sleep}h` : "-"}</td>
-                    <td className="py-3">
-                      <div className="flex gap-2">
+                    }
+                    fields={[
+                      { label: "걸음수", value: r.steps?.toLocaleString() ?? "-" },
+                      { label: "수분", value: r.water != null ? `${r.water}L` : "-" },
+                      { label: "수면", value: r.sleep != null ? `${r.sleep}h` : "-" },
+                    ]}
+                    actions={
+                      <>
                         <Button variant="ghost" size="sm" onClick={() => openEdit(r)}>
                           수정
                         </Button>
@@ -263,14 +318,13 @@ export default function WeightPage() {
                         >
                           삭제
                         </Button>
-                      </div>
-                    </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                      </>
+                    }
+                  />
+                );
+              })}
+            </MobileRecordList>
+          </>
         )}
       </Card>
 
@@ -279,7 +333,7 @@ export default function WeightPage() {
         onClose={() => setModalOpen(false)}
         title={editingId ? "체중 기록 수정" : "체중 기록 추가"}
       >
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Input
             label="날짜"
             type="date"
@@ -333,7 +387,7 @@ export default function WeightPage() {
             className="sm:col-span-2"
           />
         </div>
-        <div className="mt-6 flex justify-end gap-2">
+        <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           <Button variant="secondary" onClick={() => setModalOpen(false)}>
             취소
           </Button>

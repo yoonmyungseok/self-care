@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Card } from "@/components/ui/Card";
@@ -91,11 +92,11 @@ export default function SettingsPage() {
   return (
     <AppLayout>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-slate-900">설정</h1>
+        <h1 className="text-xl font-bold text-slate-900 sm:text-2xl">설정</h1>
         <p className="text-sm text-slate-500">목표 체중과 프로필을 설정하세요</p>
       </div>
 
-      <div className="max-w-lg space-y-6">
+      <div className="max-w-lg space-y-6 pb-4">
         <Card title="체중 목표">
           <Input
             label="목표 체중 (kg)"
@@ -110,7 +111,7 @@ export default function SettingsPage() {
           <p className="mb-4 text-sm text-slate-500">
             프로필 정보를 기반으로 영양 목표가 자동 계산됩니다
           </p>
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Input
               label="출생년도"
               type="number"
@@ -139,41 +140,62 @@ export default function SettingsPage() {
           </div>
         </Card>
 
+        <Card title="데이터 관리" className="lg:hidden">
+          <div className="divide-y divide-slate-100">
+            <Link
+              href="/running-settings"
+              className="flex min-h-11 items-center justify-between py-3 text-sm font-medium text-slate-700"
+            >
+              <span>🏷️ 러닝 종류 설정</span>
+              <span className="text-slate-400">›</span>
+            </Link>
+            <Link
+              href="/food-settings"
+              className="flex min-h-11 items-center justify-between py-3 text-sm font-medium text-slate-700"
+            >
+              <span>🥗 음식 설정</span>
+              <span className="text-slate-400">›</span>
+            </Link>
+          </div>
+        </Card>
+
         <Card title="영양 목표 (하루) — 자동 계산">
           <p className="mb-4 text-sm text-slate-500">
             최신 체중 기록과 프로필을 기반으로 Mifflin-St Jeor 공식으로 계산됩니다
           </p>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="rounded-lg bg-slate-50 px-4 py-3">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 sm:gap-4">
+            <div className="min-w-0 rounded-lg bg-slate-50 px-3 py-3 sm:px-4">
               <p className="text-xs text-slate-500">목표 칼로리</p>
-              <p className="text-lg font-semibold text-slate-900">
+              <p className="break-words text-base font-semibold text-slate-900 sm:text-lg">
                 {settings?.targetCalories.toLocaleString()} kcal
               </p>
             </div>
-            <div className="rounded-lg bg-slate-50 px-4 py-3">
+            <div className="min-w-0 rounded-lg bg-slate-50 px-3 py-3 sm:px-4">
               <p className="text-xs text-slate-500">목표 탄수화물</p>
-              <p className="text-lg font-semibold text-slate-900">
+              <p className="break-words text-base font-semibold text-slate-900 sm:text-lg">
                 {settings?.targetCarbs.toLocaleString()} g
               </p>
             </div>
-            <div className="rounded-lg bg-slate-50 px-4 py-3">
+            <div className="min-w-0 rounded-lg bg-slate-50 px-3 py-3 sm:px-4">
               <p className="text-xs text-slate-500">목표 단백질</p>
-              <p className="text-lg font-semibold text-slate-900">
+              <p className="break-words text-base font-semibold text-slate-900 sm:text-lg">
                 {settings?.targetProtein.toLocaleString()} g
               </p>
             </div>
-            <div className="rounded-lg bg-slate-50 px-4 py-3">
+            <div className="min-w-0 rounded-lg bg-slate-50 px-3 py-3 sm:px-4">
               <p className="text-xs text-slate-500">목표 지방</p>
-              <p className="text-lg font-semibold text-slate-900">
+              <p className="break-words text-base font-semibold text-slate-900 sm:text-lg">
                 {settings?.targetFat.toLocaleString()} g
               </p>
             </div>
           </div>
         </Card>
 
-        <Button onClick={handleSave} disabled={saving}>
-          {saving ? "저장 중..." : "설정 저장"}
-        </Button>
+        <div className="sticky bottom-[calc(3.5rem+env(safe-area-inset-bottom,0px))] -mx-4 border-t border-slate-200 bg-slate-50/95 px-4 py-3 backdrop-blur sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:p-0 sm:backdrop-blur-none">
+          <Button onClick={handleSave} disabled={saving} className="w-full sm:w-auto">
+            {saving ? "저장 중..." : "설정 저장"}
+          </Button>
+        </div>
       </div>
     </AppLayout>
   );

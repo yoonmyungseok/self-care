@@ -17,9 +17,9 @@ export function ProgressBar({
 
   return (
     <div>
-      <div className="mb-1 flex justify-between text-sm">
-        <span className="font-medium text-slate-700">{label}</span>
-        <span className="text-slate-500">
+      <div className="mb-1 flex flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5 text-sm">
+        <span className="min-w-0 font-medium text-slate-700">{label}</span>
+        <span className="shrink-0 whitespace-nowrap text-slate-500">
           {current.toFixed(0)}{unit} / {target.toFixed(0)}{unit}
         </span>
       </div>

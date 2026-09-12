@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Modal, ConfirmDialog } from "@/components/ui/Modal";
 import { LoadingSpinner, EmptyState } from "@/components/ui/Loading";
+import { RecordCard, MobileRecordList } from "@/components/ui/RecordCard";
 import { useToast } from "@/components/ui/Toast";
 
 interface FoodItem {
@@ -134,62 +135,103 @@ export default function FoodSettingsPage() {
 
   return (
     <AppLayout>
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">음식 설정</h1>
+          <h1 className="text-xl font-bold text-slate-900 sm:text-2xl">음식 설정</h1>
           <p className="text-sm text-slate-500">식단 기록에 사용할 음식 DB를 관리하세요</p>
         </div>
-        <Button onClick={openAdd}>음식 추가</Button>
+        <Button onClick={openAdd} className="w-full sm:w-auto">음식 추가</Button>
       </div>
 
       <Card>
         {foodItems.length === 0 ? (
           <EmptyState message="등록된 음식이 없습니다" />
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-slate-200 text-left text-slate-500">
-                  <th className="pb-2 pr-4">음식명</th>
-                  <th className="pb-2 pr-4">기준량</th>
-                  <th className="pb-2 pr-4">칼로리</th>
-                  <th className="pb-2 pr-4">탄수화물</th>
-                  <th className="pb-2 pr-4">단백질</th>
-                  <th className="pb-2 pr-4">지방</th>
-                  <th className="pb-2">작업</th>
-                </tr>
-              </thead>
-              <tbody>
-                {foodItems.map((item) => (
-                  <tr key={item.id} className="border-b border-slate-100">
-                    <td className="py-3 pr-4 font-medium">{item.name}</td>
-                    <td className="py-3 pr-4">{item.standardAmount}</td>
-                    <td className="py-3 pr-4">{item.calories}</td>
-                    <td className="py-3 pr-4">{item.carbs}g</td>
-                    <td className="py-3 pr-4">{item.protein}g</td>
-                    <td className="py-3 pr-4">{item.fat}g</td>
-                    <td className="py-3">
-                      <div className="flex gap-2">
-                        <Button variant="ghost" size="sm" onClick={() => openEdit(item)}>
-                          수정
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            setDeleteId(item.id);
-                            setConfirmOpen(true);
-                          }}
-                        >
-                          삭제
-                        </Button>
-                      </div>
-                    </td>
+          <>
+            <div className="hidden overflow-x-auto lg:block">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-slate-200 text-left text-slate-500">
+                    <th className="pb-2 pr-4">음식명</th>
+                    <th className="pb-2 pr-4">기준량</th>
+                    <th className="pb-2 pr-4">칼로리</th>
+                    <th className="pb-2 pr-4">탄수화물</th>
+                    <th className="pb-2 pr-4">단백질</th>
+                    <th className="pb-2 pr-4">지방</th>
+                    <th className="pb-2">작업</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {foodItems.map((item) => (
+                    <tr key={item.id} className="border-b border-slate-100">
+                      <td className="py-3 pr-4 font-medium">{item.name}</td>
+                      <td className="py-3 pr-4">{item.standardAmount}</td>
+                      <td className="py-3 pr-4">{item.calories}</td>
+                      <td className="py-3 pr-4">{item.carbs}g</td>
+                      <td className="py-3 pr-4">{item.protein}g</td>
+                      <td className="py-3 pr-4">{item.fat}g</td>
+                      <td className="py-3">
+                        <div className="flex gap-2">
+                          <Button variant="ghost" size="sm" onClick={() => openEdit(item)}>
+                            수정
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setDeleteId(item.id);
+                              setConfirmOpen(true);
+                            }}
+                          >
+                            삭제
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <MobileRecordList>
+              {foodItems.map((item) => (
+                <RecordCard
+                  key={item.id}
+                  title={item.name}
+                  highlight={
+                    <span className="text-sm text-slate-600">
+                      기준량 {item.standardAmount} · {item.calories} kcal
+                    </span>
+                  }
+                  fields={[
+                    {
+                      label: "탄/단/지",
+                      value: `${item.carbs}/${item.protein}/${item.fat}g`,
+                    },
+                    ...(item.sodium != null
+                      ? [{ label: "나트륨", value: `${item.sodium}mg` }]
+                      : []),
+                  ]}
+                  actions={
+                    <>
+                      <Button variant="ghost" size="sm" onClick={() => openEdit(item)}>
+                        수정
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setDeleteId(item.id);
+                          setConfirmOpen(true);
+                        }}
+                      >
+                        삭제
+                      </Button>
+                    </>
+                  }
+                />
+              ))}
+            </MobileRecordList>
+          </>
         )}
       </Card>
 
@@ -198,7 +240,7 @@ export default function FoodSettingsPage() {
         onClose={() => setModalOpen(false)}
         title={editingId ? "음식 수정" : "음식 추가"}
       >
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Input
             label="음식명"
             value={form.name}
@@ -249,8 +291,12 @@ export default function FoodSettingsPage() {
             className="sm:col-span-2"
           />
         </div>
-        <div className="mt-6 flex justify-end gap-2">
-          <Button variant="secondary" onClick={() => setModalOpen(false)}>
+        <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <Button
+            variant="secondary"
+            onClick={() => setModalOpen(false)}
+            className="w-full sm:w-auto"
+          >
             취소
           </Button>
           <Button
@@ -264,6 +310,7 @@ export default function FoodSettingsPage() {
               !form.protein ||
               !form.fat
             }
+            className="w-full sm:w-auto"
           >
             {saving ? "저장 중..." : "저장"}
           </Button>
