@@ -1,13 +1,16 @@
 import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, subDays, subWeeks } from "date-fns";
 import { prisma } from "@/lib/db";
 import { errorResponse, jsonResponse } from "@/lib/utils";
-import { runningRecordSchema } from "@/lib/validations/schemas";
+import { validateRunningRecord } from "@/lib/validations/schemas";
+import { getRestDayTypeSet, getRestDayTypeValues } from "@/lib/services/running-types";
 import {
   calculatePaceSeconds,
   calculateAveragePace,
   sumDistance,
   countRecords,
   findLongestRun,
+  isActiveRun,
+  normalizeRunningRecord,
 } from "@/lib/calculations/running";
 
 export async function GET(request: Request) {
@@ -52,18 +55,27 @@ export async function GET(request: Request) {
     const lastWeekRecords = records.filter((r) => r.date >= lastWeekStart && r.date <= lastWeekEnd);
     const recent30Records = records.filter((r) => r.date >= last30Start && r.date <= today);
 
-    const weekDistance = sumDistance(weekRecords);
-    const lastWeekDistance = sumDistance(lastWeekRecords);
+    const restDayTypes = await getRestDayTypeSet();
+
+    const weekDistance = sumDistance(weekRecords, restDayTypes);
+    const lastWeekDistance = sumDistance(lastWeekRecords, restDayTypes);
+    const activeWeekRecords = weekRecords.filter((r) => isActiveRun(r, restDayTypes));
+    const activeMonthRecords = records.filter(
+      (r) => r.date >= monthStart && r.date <= monthEnd && isActiveRun(r, restDayTypes),
+    );
 
     const stats = {
       weekDistance,
-      monthDistance: sumDistance(records.filter((r) => r.date >= monthStart && r.date <= monthEnd)),
-      last7DaysDistance: sumDistance(records.filter((r) => r.date >= last7)),
-      last30DaysDistance: sumDistance(recent30Records),
-      weekCount: countRecords(records, weekStart, weekEnd),
-      monthCount: countRecords(records, monthStart, monthEnd),
-      recent30AveragePace: calculateAveragePace(recent30Records),
-      longestRun: findLongestRun(records),
+      monthDistance: sumDistance(
+        records.filter((r) => r.date >= monthStart && r.date <= monthEnd),
+        restDayTypes,
+      ),
+      last7DaysDistance: sumDistance(records.filter((r) => r.date >= last7), restDayTypes),
+      last30DaysDistance: sumDistance(recent30Records, restDayTypes),
+      weekCount: countRecords(activeWeekRecords, weekStart, weekEnd),
+      monthCount: countRecords(activeMonthRecords, monthStart, monthEnd),
+      recent30AveragePace: calculateAveragePace(recent30Records, restDayTypes),
+      longestRun: findLongestRun(records, restDayTypes),
       lastWeekDistance,
       weekOverWeekChange: weekDistance - lastWeekDistance,
     };
@@ -75,6 +87,7 @@ export async function GET(request: Request) {
     const paceByDate = new Map<string, { totalDist: number; totalDur: number }>();
 
     for (const r of chartRecords) {
+      if (!isActiveRun(r, restDayTypes)) continue;
       distanceByDate.set(r.date, (distanceByDate.get(r.date) ?? 0) + r.distance);
       const existing = paceByDate.get(r.date) ?? { totalDist: 0, totalDur: 0 };
       existing.totalDist += r.distance;
@@ -108,23 +121,24 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
     const { splits, ...rest } = body;
-    const parsed = runningRecordSchema.safeParse(rest);
+    const restDayTypeValues = await getRestDayTypeValues();
+    const parsed = validateRunningRecord(rest, restDayTypeValues);
     if (!parsed.success) {
       return errorResponse(parsed.error.issues[0]?.message ?? "유효하지 않은 입력입니다");
     }
 
-    const avgPaceSeconds = calculatePaceSeconds(
-      parsed.data.distance,
-      parsed.data.durationSeconds,
-    );
+    const restDayTypes = new Set(restDayTypeValues);
+    const data = normalizeRunningRecord(parsed.data, restDayTypes);
+    const avgPaceSeconds = calculatePaceSeconds(data.distance, data.durationSeconds);
+    const activeSplits = restDayTypes.has(data.type) ? [] : splits;
 
     const record = await prisma.runningRecord.create({
       data: {
-        ...parsed.data,
+        ...data,
         avgPaceSeconds,
-        splits: splits?.length
+        splits: activeSplits?.length
           ? {
-              create: splits.map(
+              create: activeSplits.map(
                 (s: {
                   splitNumber: number;
                   distance: number;

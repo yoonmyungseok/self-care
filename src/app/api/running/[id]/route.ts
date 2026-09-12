@@ -1,7 +1,8 @@
 import { prisma } from "@/lib/db";
 import { errorResponse, jsonResponse } from "@/lib/utils";
-import { runningRecordSchema } from "@/lib/validations/schemas";
-import { calculatePaceSeconds } from "@/lib/calculations/running";
+import { validateRunningRecord } from "@/lib/validations/schemas";
+import { getRestDayTypeSet, getRestDayTypeValues } from "@/lib/services/running-types";
+import { calculatePaceSeconds, normalizeRunningRecord } from "@/lib/calculations/running";
 
 type RouteParams = { params: Promise<{ id: string }> };
 
@@ -26,22 +27,23 @@ export async function PUT(request: Request, { params }: RouteParams) {
     const recordId = parseInt(id, 10);
     const body = await request.json();
     const { splits, ...rest } = body;
-    const parsed = runningRecordSchema.safeParse(rest);
+    const restDayTypeValues = await getRestDayTypeValues();
+    const parsed = validateRunningRecord(rest, restDayTypeValues);
     if (!parsed.success) {
       return errorResponse(parsed.error.issues[0]?.message ?? "유효하지 않은 입력입니다");
     }
 
-    const avgPaceSeconds = calculatePaceSeconds(
-      parsed.data.distance,
-      parsed.data.durationSeconds,
-    );
+    const restDayTypes = await getRestDayTypeSet();
+    const data = normalizeRunningRecord(parsed.data, restDayTypes);
+    const avgPaceSeconds = calculatePaceSeconds(data.distance, data.durationSeconds);
+    const activeSplits = restDayTypes.has(data.type) ? [] : splits;
 
     await prisma.$transaction(async (tx) => {
-      if (splits !== undefined) {
+      if (activeSplits !== undefined) {
         await tx.runningSplit.deleteMany({ where: { runningRecordId: recordId } });
-        if (splits.length > 0) {
+        if (activeSplits.length > 0) {
           await tx.runningSplit.createMany({
-            data: splits.map(
+            data: activeSplits.map(
               (s: {
                 splitNumber: number;
                 distance: number;
@@ -60,7 +62,7 @@ export async function PUT(request: Request, { params }: RouteParams) {
 
       await tx.runningRecord.update({
         where: { id: recordId },
-        data: { ...parsed.data, avgPaceSeconds },
+        data: { ...data, avgPaceSeconds },
       });
     });
 

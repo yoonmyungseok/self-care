@@ -11,15 +11,73 @@ export const weightRecordSchema = z.object({
   memo: z.string().optional().nullable(),
 });
 
-export const runningRecordSchema = z.object({
+export const runningRecordBaseSchema = z.object({
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   type: z.string().min(1, "러닝 종류를 선택해주세요"),
-  distance: z.number().positive("거리는 0보다 커야 합니다"),
-  durationSeconds: z.number().int().positive("운동 시간은 0보다 커야 합니다"),
+  distance: z.number().nonnegative(),
+  durationSeconds: z.number().int().nonnegative(),
   avgHeartRate: z.number().int().nonnegative().optional().nullable(),
   maxHeartRate: z.number().int().nonnegative().optional().nullable(),
   cadence: z.number().int().nonnegative().optional().nullable(),
   memo: z.string().optional().nullable(),
+});
+
+export function validateRunningRecord(
+  data: unknown,
+  restDayTypeValues: string[] = ["rest"],
+) {
+  const parsed = runningRecordBaseSchema.safeParse(data);
+  if (!parsed.success) return parsed;
+
+  const restDaySet = new Set(restDayTypeValues);
+  const issues: z.ZodIssue[] = [];
+
+  if (restDaySet.has(parsed.data.type)) {
+    if (parsed.data.distance !== 0) {
+      issues.push({
+        code: z.ZodIssueCode.custom,
+        message: "휴식일은 거리를 입력할 수 없습니다",
+        path: ["distance"],
+      });
+    }
+    if (parsed.data.durationSeconds !== 0) {
+      issues.push({
+        code: z.ZodIssueCode.custom,
+        message: "휴식일은 운동 시간을 입력할 수 없습니다",
+        path: ["durationSeconds"],
+      });
+    }
+  } else {
+    if (parsed.data.distance <= 0) {
+      issues.push({
+        code: z.ZodIssueCode.custom,
+        message: "거리는 0보다 커야 합니다",
+        path: ["distance"],
+      });
+    }
+    if (parsed.data.durationSeconds <= 0) {
+      issues.push({
+        code: z.ZodIssueCode.custom,
+        message: "운동 시간은 0보다 커야 합니다",
+        path: ["durationSeconds"],
+      });
+    }
+  }
+
+  if (issues.length > 0) {
+    return { success: false as const, error: new z.ZodError(issues) };
+  }
+
+  return { success: true as const, data: parsed.data };
+}
+
+export const runningRecordSchema = runningRecordBaseSchema.superRefine((data, ctx) => {
+  const result = validateRunningRecord(data);
+  if (!result.success) {
+    for (const issue of result.error.issues) {
+      ctx.addIssue(issue);
+    }
+  }
 });
 
 export const runningSplitSchema = z.object({
@@ -55,6 +113,16 @@ export const foodItemSchema = z.object({
   sodium: z.number().nonnegative().optional().nullable(),
 });
 
+export const runningTypeSchema = z.object({
+  value: z
+    .string()
+    .min(1, "식별값을 입력해주세요")
+    .regex(/^[a-z][a-z0-9_]*$/, "영문 소문자, 숫자, 밑줄만 사용 가능합니다"),
+  label: z.string().min(1, "표시 이름을 입력해주세요"),
+  excludeFromStats: z.boolean(),
+  sortOrder: z.number().int().nonnegative(),
+});
+
 export const settingsSchema = z.object({
   targetWeight: z.number().positive("목표 체중은 0보다 커야 합니다"),
   birthYear: z
@@ -72,4 +140,5 @@ export type RunningRecordInput = z.infer<typeof runningRecordSchema>;
 export type RunningSplitInput = z.infer<typeof runningSplitSchema>;
 export type FoodEntryInput = z.infer<typeof foodEntrySchema>;
 export type FoodItemInput = z.infer<typeof foodItemSchema>;
+export type RunningTypeInput = z.infer<typeof runningTypeSchema>;
 export type SettingsInput = z.infer<typeof settingsSchema>;

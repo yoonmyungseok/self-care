@@ -1,5 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { formatRunningRecordText } from "@/lib/format/running-text";
+import { runningRecordSchema } from "@/lib/validations/schemas";
+import { normalizeRunningRecord } from "@/lib/calculations/running";
 
 describe("formatRunningRecordText", () => {
   it("formats a running record for clipboard copy", () => {
@@ -40,5 +42,69 @@ describe("formatRunningRecordText", () => {
 4km - 페이스: 6:18 / 심박수: 152 / 케이던스: 172
 5km - 페이스: 9:12 / 심박수: 135 / 케이던스: 168`,
     );
+  });
+
+  it("formats a rest day record", () => {
+    const text = formatRunningRecordText({
+      date: "2026-09-07",
+      type: "rest",
+      distance: 0,
+      durationSeconds: 0,
+      avgPaceSeconds: null,
+      avgHeartRate: null,
+      maxHeartRate: null,
+      cadence: null,
+      memo: "무릎 휴식",
+      splits: [],
+    });
+
+    expect(text).toBe(`날짜: 2026-09-07
+종류: 휴식
+메모: 무릎 휴식`);
+  });
+});
+
+describe("runningRecordSchema", () => {
+  it("accepts rest days with zero distance and duration", () => {
+    const parsed = runningRecordSchema.safeParse({
+      date: "2026-09-07",
+      type: "rest",
+      distance: 0,
+      durationSeconds: 0,
+      memo: "휴식",
+    });
+    expect(parsed.success).toBe(true);
+  });
+
+  it("rejects rest days with distance", () => {
+    const parsed = runningRecordSchema.safeParse({
+      date: "2026-09-07",
+      type: "rest",
+      distance: 5,
+      durationSeconds: 0,
+    });
+    expect(parsed.success).toBe(false);
+  });
+
+  it("normalizes rest day payloads", () => {
+    const normalized = normalizeRunningRecord({
+      date: "2026-09-07",
+      type: "rest",
+      distance: 5,
+      durationSeconds: 3600,
+      avgHeartRate: 120,
+      maxHeartRate: 140,
+      cadence: 170,
+    });
+
+    expect(normalized).toEqual({
+      date: "2026-09-07",
+      type: "rest",
+      distance: 0,
+      durationSeconds: 0,
+      avgHeartRate: null,
+      maxHeartRate: null,
+      cadence: null,
+    });
   });
 });

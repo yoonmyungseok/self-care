@@ -13,8 +13,16 @@ import { RunningDistanceChart } from "@/components/charts/Charts";
 import { useToast } from "@/components/ui/Toast";
 import { formatPace, calculatePaceSeconds, formatDistanceChange } from "@/lib/calculations/running";
 import { formatDisplayDate, formatDuration, parseDurationToSeconds, todayString } from "@/lib/utils";
-import { RUNNING_TYPES, getRunningTypeLabel } from "@/lib/constants";
+import { getRunningTypeLabel, isRestDay } from "@/lib/constants";
 import { formatRunningRecordText } from "@/lib/format/running-text";
+
+interface RunningType {
+  id: number;
+  value: string;
+  label: string;
+  excludeFromStats: boolean;
+  sortOrder: number;
+}
 
 interface RunningSplit {
   id?: number;
@@ -79,19 +87,30 @@ export default function RunningPage() {
   const [form, setForm] = useState(emptyForm);
   const [splits, setSplits] = useState<typeof emptySplit[]>([]);
   const [saving, setSaving] = useState(false);
+  const [runningTypes, setRunningTypes] = useState<RunningType[]>([]);
+
+  const restDayValues = runningTypes.filter((t) => t.excludeFromStats).map((t) => t.value);
+  const typeOptions = runningTypes.map(({ value, label }) => ({ value, label }));
 
   const fetchData = useCallback(async () => {
-    const res = await fetch("/api/running?days=30");
-    const data = await res.json();
+    const [runningRes, typesRes] = await Promise.all([
+      fetch("/api/running?days=30"),
+      fetch("/api/running/types"),
+    ]);
+    const data = await runningRes.json();
+    const types: RunningType[] = await typesRes.json();
     setRecords(data.records);
     setStats(data.stats);
     setDistanceChart(data.distanceChart);
+    setRunningTypes(types);
     setLoading(false);
   }, []);
 
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  const isRest = isRestDay(form.type, restDayValues);
 
   const computedPace = () => {
     const dist = parseFloat(form.distance);
@@ -112,15 +131,17 @@ export default function RunningPage() {
     setForm({
       date: record.date,
       type: record.type,
-      distance: record.distance.toString(),
-      duration: formatDuration(record.durationSeconds),
+      distance: isRestDay(record.type, restDayValues) ? "" : record.distance.toString(),
+      duration: isRestDay(record.type, restDayValues) ? "" : formatDuration(record.durationSeconds),
       avgHeartRate: record.avgHeartRate?.toString() ?? "",
       maxHeartRate: record.maxHeartRate?.toString() ?? "",
       cadence: record.cadence?.toString() ?? "",
       memo: record.memo ?? "",
     });
     setSplits(
-      record.splits.map((s) => ({
+      isRestDay(record.type, restDayValues)
+        ? []
+        : record.splits.map((s) => ({
         splitNumber: s.splitNumber,
         distance: s.distance.toString(),
         duration: formatDuration(s.durationSeconds),
@@ -131,7 +152,62 @@ export default function RunningPage() {
     setModalOpen(true);
   };
 
+  const handleTypeChange = (type: string) => {
+    if (isRestDay(type, restDayValues)) {
+      setForm({
+        ...form,
+        type,
+        distance: "",
+        duration: "",
+        avgHeartRate: "",
+        maxHeartRate: "",
+        cadence: "",
+      });
+      setSplits([]);
+      return;
+    }
+
+    setForm({ ...form, type });
+  };
+
   const handleSave = async () => {
+    if (isRest) {
+      setSaving(true);
+      const payload = {
+        date: form.date,
+        type: form.type,
+        distance: 0,
+        durationSeconds: 0,
+        avgHeartRate: null,
+        maxHeartRate: null,
+        cadence: null,
+        memo: form.memo || null,
+        splits: [],
+      };
+
+      const url = editingId ? `/api/running/${editingId}` : "/api/running";
+      const method = editingId ? "PUT" : "POST";
+
+      const res = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await res.json();
+      setSaving(false);
+
+      if (!res.ok) {
+        showToast(data.error ?? "저장에 실패했습니다", "error");
+        return;
+      }
+
+      showToast(editingId ? "수정되었습니다" : "저장되었습니다");
+      setModalOpen(false);
+      fetchData();
+      return;
+    }
+
     const durationSeconds = parseDurationToSeconds(form.duration);
     if (!durationSeconds) {
       showToast("올바른 운동 시간을 입력해주세요 (MM:SS 또는 HH:MM:SS)", "error");
@@ -215,7 +291,7 @@ export default function RunningPage() {
 
   const copyRecord = async (record: RunningRecord) => {
     try {
-      await navigator.clipboard.writeText(formatRunningRecordText(record));
+      await navigator.clipboard.writeText(formatRunningRecordText(record, runningTypes));
       showToast("복사되었습니다");
     } catch {
       showToast("복사에 실패했습니다", "error");
@@ -290,10 +366,16 @@ export default function RunningPage() {
                 {records.map((r) => (
                   <tr key={r.id} className="border-b border-slate-100">
                     <td className="py-3 pr-4">{formatDisplayDate(r.date)}</td>
-                    <td className="py-3 pr-4">{getRunningTypeLabel(r.type)}</td>
-                    <td className="py-3 pr-4 font-medium">{r.distance.toFixed(1)} km</td>
-                    <td className="py-3 pr-4">{formatDuration(r.durationSeconds)}</td>
-                    <td className="py-3 pr-4">{formatPace(r.avgPaceSeconds)}</td>
+                    <td className="py-3 pr-4">{getRunningTypeLabel(r.type, typeOptions)}</td>
+                    <td className="py-3 pr-4 font-medium">
+                      {isRestDay(r.type, restDayValues) ? "-" : `${r.distance.toFixed(1)} km`}
+                    </td>
+                    <td className="py-3 pr-4">
+                      {isRestDay(r.type, restDayValues) ? "-" : formatDuration(r.durationSeconds)}
+                    </td>
+                    <td className="py-3 pr-4">
+                      {isRestDay(r.type, restDayValues) ? "-" : formatPace(r.avgPaceSeconds)}
+                    </td>
                     <td className="py-3">
                       <div className="flex gap-2">
                         <Button variant="ghost" size="sm" onClick={() => copyRecord(r)}>
@@ -338,50 +420,68 @@ export default function RunningPage() {
           <Select
             label="러닝 종류"
             value={form.type}
-            onChange={(e) => setForm({ ...form, type: e.target.value })}
-            options={[...RUNNING_TYPES]}
+            onChange={(e) => handleTypeChange(e.target.value)}
+            options={typeOptions}
           />
-          <Input
-            label="거리 (km)"
-            type="number"
-            step="0.1"
-            value={form.distance}
-            onChange={(e) => setForm({ ...form, distance: e.target.value })}
-          />
-          <Input
-            label="운동 시간 (MM:SS 또는 HH:MM:SS)"
-            placeholder="00:55:00"
-            value={form.duration}
-            onChange={(e) => setForm({ ...form, duration: e.target.value })}
-          />
-          <div className="sm:col-span-2 rounded-lg bg-slate-50 px-3 py-2 text-sm">
-            평균 페이스: <strong>{formatPace(computedPace())}</strong>
-          </div>
-          <Input
-            label="평균 심박수"
-            type="number"
-            value={form.avgHeartRate}
-            onChange={(e) => setForm({ ...form, avgHeartRate: e.target.value })}
-          />
-          <Input
-            label="최대 심박수"
-            type="number"
-            value={form.maxHeartRate}
-            onChange={(e) => setForm({ ...form, maxHeartRate: e.target.value })}
-          />
-          <Input
-            label="케이던스"
-            type="number"
-            value={form.cadence}
-            onChange={(e) => setForm({ ...form, cadence: e.target.value })}
-          />
-          <Input
-            label="메모"
-            value={form.memo}
-            onChange={(e) => setForm({ ...form, memo: e.target.value })}
-          />
+          {isRest ? (
+            <>
+              <div className="sm:col-span-2">
+                <Input
+                  label="메모"
+                  value={form.memo}
+                  onChange={(e) => setForm({ ...form, memo: e.target.value })}
+                />
+              </div>
+              <p className="sm:col-span-2 text-sm text-slate-500">
+                통계 제외 종류는 날짜와 메모만 기록합니다. 거리·페이스 통계에는 포함되지 않습니다.
+              </p>
+            </>
+          ) : (
+            <>
+              <Input
+                label="거리 (km)"
+                type="number"
+                step="0.1"
+                value={form.distance}
+                onChange={(e) => setForm({ ...form, distance: e.target.value })}
+              />
+              <Input
+                label="운동 시간 (MM:SS 또는 HH:MM:SS)"
+                placeholder="00:55:00"
+                value={form.duration}
+                onChange={(e) => setForm({ ...form, duration: e.target.value })}
+              />
+              <div className="sm:col-span-2 rounded-lg bg-slate-50 px-3 py-2 text-sm">
+                평균 페이스: <strong>{formatPace(computedPace())}</strong>
+              </div>
+              <Input
+                label="평균 심박수"
+                type="number"
+                value={form.avgHeartRate}
+                onChange={(e) => setForm({ ...form, avgHeartRate: e.target.value })}
+              />
+              <Input
+                label="최대 심박수"
+                type="number"
+                value={form.maxHeartRate}
+                onChange={(e) => setForm({ ...form, maxHeartRate: e.target.value })}
+              />
+              <Input
+                label="케이던스"
+                type="number"
+                value={form.cadence}
+                onChange={(e) => setForm({ ...form, cadence: e.target.value })}
+              />
+              <Input
+                label="메모"
+                value={form.memo}
+                onChange={(e) => setForm({ ...form, memo: e.target.value })}
+              />
+            </>
+          )}
         </div>
 
+        {!isRest && (
         <div className="mt-6">
           <div className="mb-2 flex items-center justify-between">
             <h3 className="text-sm font-semibold text-slate-700">구간별 기록</h3>
@@ -432,12 +532,16 @@ export default function RunningPage() {
             </div>
           ))}
         </div>
+        )}
 
         <div className="mt-6 flex justify-end gap-2">
           <Button variant="secondary" onClick={() => setModalOpen(false)}>
             취소
           </Button>
-          <Button onClick={handleSave} disabled={saving || !form.distance || !form.duration}>
+          <Button
+            onClick={handleSave}
+            disabled={saving || (!isRest && (!form.distance || !form.duration))}
+          >
             {saving ? "저장 중..." : "저장"}
           </Button>
         </div>

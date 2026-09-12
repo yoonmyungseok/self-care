@@ -57,6 +57,16 @@ describe("running calculations", () => {
 
   it("sums distance", () => {
     expect(sumDistance([{ distance: 5 }, { distance: 10 }])).toBe(15);
+    expect(sumDistance([{ distance: 5, type: "easy" }, { distance: 0, type: "rest" }])).toBe(5);
+  });
+
+  it("excludes rest days from average pace and longest run", () => {
+    const records = [
+      { distance: 10, durationSeconds: 3300, type: "easy" },
+      { distance: 0, durationSeconds: 0, type: "rest" },
+    ];
+    expect(calculateAveragePace(records)).toBeCloseTo(330, 0);
+    expect(findLongestRun([{ date: "2026-09-01", distance: 0, type: "rest" }])).toBeNull();
   });
 
   it("counts records in date range", () => {

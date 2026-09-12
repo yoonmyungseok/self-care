@@ -1,3 +1,37 @@
+function isRestDayType(type: string, restDayTypes?: Set<string>): boolean {
+  if (restDayTypes) return restDayTypes.has(type);
+  return type === "rest";
+}
+
+export function isActiveRun(
+  record: { type?: string },
+  restDayTypes?: Set<string>,
+): boolean {
+  return !isRestDayType(record.type ?? "", restDayTypes);
+}
+
+export function normalizeRunningRecord<
+  T extends {
+    type: string;
+    distance: number;
+    durationSeconds: number;
+    avgHeartRate?: number | null;
+    maxHeartRate?: number | null;
+    cadence?: number | null;
+  },
+>(data: T, restDayTypes?: Set<string>): T {
+  if (!isRestDayType(data.type, restDayTypes)) return data;
+
+  return {
+    ...data,
+    distance: 0,
+    durationSeconds: 0,
+    avgHeartRate: null,
+    maxHeartRate: null,
+    cadence: null,
+  };
+}
+
 /**
  * Calculate average pace in seconds per km.
  * pace = duration(minutes) / distance(km)
@@ -38,9 +72,12 @@ export function formatDistanceKm(distance: number): string {
 }
 
 export function calculateAveragePace(
-  records: { distance: number; durationSeconds: number }[],
+  records: { distance: number; durationSeconds: number; type?: string }[],
+  restDayTypes?: Set<string>,
 ): number | null {
-  const valid = records.filter((r) => r.distance > 0 && r.durationSeconds > 0);
+  const valid = records.filter(
+    (r) => isActiveRun(r, restDayTypes) && r.distance > 0 && r.durationSeconds > 0,
+  );
   if (valid.length === 0) return null;
 
   const totalDistance = valid.reduce((sum, r) => sum + r.distance, 0);
@@ -48,8 +85,13 @@ export function calculateAveragePace(
   return calculatePaceSeconds(totalDistance, totalDuration);
 }
 
-export function sumDistance(records: { distance: number }[]): number {
-  return records.reduce((sum, r) => sum + r.distance, 0);
+export function sumDistance(
+  records: { distance: number; type?: string }[],
+  restDayTypes?: Set<string>,
+): number {
+  return records
+    .filter((r) => isActiveRun(r, restDayTypes))
+    .reduce((sum, r) => sum + r.distance, 0);
 }
 
 export function countRecords(
@@ -61,11 +103,13 @@ export function countRecords(
 }
 
 export function findLongestRun(
-  records: { date: string; distance: number }[],
+  records: { date: string; distance: number; type?: string }[],
+  restDayTypes?: Set<string>,
 ): { distance: number; date: string } | null {
-  if (records.length === 0) return null;
+  const activeRuns = records.filter((r) => isActiveRun(r, restDayTypes));
+  if (activeRuns.length === 0) return null;
 
-  const longest = records.reduce((best, record) =>
+  const longest = activeRuns.reduce((best, record) =>
     record.distance > best.distance ? record : best,
   );
 

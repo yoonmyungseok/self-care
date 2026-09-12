@@ -8,10 +8,17 @@ const navItems = [
   { href: "/", label: "Dashboard", icon: "📊" },
   { href: "/weight", label: "체중", icon: "⚖️" },
   { href: "/running", label: "러닝", icon: "🏃" },
+  { href: "/running-settings", label: "러닝 종류", icon: "🏷️" },
   { href: "/diet", label: "식단", icon: "🍽️" },
   { href: "/food-settings", label: "음식 설정", icon: "🥗" },
   { href: "/settings", label: "설정", icon: "⚙️" },
 ];
+
+function isNavActive(pathname: string, href: string): boolean {
+  if (href === "/") return pathname === "/";
+  if (pathname === href) return true;
+  return pathname.startsWith(`${href}/`);
+}
 
 export function Sidebar() {
   const pathname = usePathname();
@@ -24,8 +31,7 @@ export function Sidebar() {
       </div>
       <nav className="flex-1 space-y-1 p-3">
         {navItems.map((item) => {
-          const isActive =
-            item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+          const isActive = isNavActive(pathname, item.href);
           return (
             <Link
               key={item.href}
@@ -53,8 +59,7 @@ export function MobileNav() {
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-40 flex border-t border-slate-200 bg-white lg:hidden">
       {navItems.map((item) => {
-        const isActive =
-          item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+        const isActive = isNavActive(pathname, item.href);
         return (
           <Link
             key={item.href}

@@ -10,7 +10,7 @@ import { WeightChart, RunningDistanceChart } from "@/components/charts/Charts";
 import { formatWeightChange, getWeightChangeClassName, getWeightChangeTrend } from "@/lib/calculations/weight";
 import { formatPace } from "@/lib/calculations/running";
 import { formatDisplayDate } from "@/lib/utils";
-import { getRunningTypeLabel, getMealTypeLabel } from "@/lib/constants";
+import { getRunningTypeLabel, getMealTypeLabel, isRestDay } from "@/lib/constants";
 
 interface DashboardData {
   weight: {
@@ -63,6 +63,11 @@ interface DashboardData {
     mealType: string;
     foodEntries: { id: number; foodName: string; calories: number }[];
   }[];
+  runningTypes: {
+    value: string;
+    label: string;
+    excludeFromStats: boolean;
+  }[];
 }
 
 export default function DashboardPage() {
@@ -91,6 +96,11 @@ export default function DashboardPage() {
       </AppLayout>
     );
   }
+
+  const typeOptions = data.runningTypes.map(({ value, label }) => ({ value, label }));
+  const restDayValues = data.runningTypes
+    .filter((t) => t.excludeFromStats)
+    .map((t) => t.value);
 
   return (
     <AppLayout>
@@ -228,10 +238,14 @@ export default function DashboardPage() {
                   <li key={r.id} className="flex justify-between text-sm">
                     <span>
                       <span className="text-slate-500">{formatDisplayDate(r.date)}</span>
-                      <span className="ml-2 text-slate-400">{getRunningTypeLabel(r.type)}</span>
+                      <span className="ml-2 text-slate-400">
+                        {getRunningTypeLabel(r.type, typeOptions)}
+                      </span>
                     </span>
                     <span className="font-medium">
-                      {r.distance.toFixed(1)} km · {formatPace(r.avgPaceSeconds)}
+                      {isRestDay(r.type, restDayValues)
+                        ? getRunningTypeLabel(r.type, typeOptions)
+                        : `${r.distance.toFixed(1)} km · ${formatPace(r.avgPaceSeconds)}`}
                     </span>
                   </li>
                 ))}

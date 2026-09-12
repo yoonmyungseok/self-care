@@ -1,10 +1,10 @@
-export const RUNNING_TYPES = [
-  { value: "easy", label: "이지런" },
-  { value: "recovery", label: "회복주" },
-  { value: "lsd", label: "LSD" },
-  { value: "rest", label: "휴식" },
-  { value: "tempo", label: "지속주" },
-] as const;
+import { DEFAULT_RUNNING_TYPES } from "@/lib/running-type-defaults";
+
+/** @deprecated Use running types from API instead */
+export const RUNNING_TYPES = DEFAULT_RUNNING_TYPES.map(({ value, label }) => ({
+  value,
+  label,
+}));
 
 export const MEAL_TYPES = [
   { value: "breakfast", label: "아침" },
@@ -41,8 +41,19 @@ export const ACTIVITY_LEVEL_OPTIONS = [
   { value: "very_active", label: "매우 활발 (하루 2회 이상)" },
 ] as const;
 
-export function getRunningTypeLabel(value: string): string {
-  return RUNNING_TYPES.find((t) => t.value === value)?.label ?? value;
+export function isRestDay(type: string, excludeFromStatsValues?: string[]): boolean {
+  if (excludeFromStatsValues) {
+    return excludeFromStatsValues.includes(type);
+  }
+  return type === "rest";
+}
+
+export function getRunningTypeLabel(
+  value: string,
+  types?: { value: string; label: string }[],
+): string {
+  const list = types ?? RUNNING_TYPES;
+  return list.find((t) => t.value === value)?.label ?? value;
 }
 
 export function getMealTypeLabel(value: string): string {

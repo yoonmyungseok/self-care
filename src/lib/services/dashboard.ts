@@ -1,8 +1,9 @@
 import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, subDays } from "date-fns";
 import { prisma } from "@/lib/db";
 import { getSettings } from "@/lib/services/settings";
+import { getRestDayTypeSet, getRunningTypes } from "@/lib/services/running-types";
 import { calculateWeightStats, getWeightChartData, buildWeightDayChanges } from "@/lib/calculations/weight";
-import { calculateAveragePace, sumDistance } from "@/lib/calculations/running";
+import { calculateAveragePace, sumDistance, isActiveRun } from "@/lib/calculations/running";
 import { calculateNutritionSummary } from "@/lib/calculations/diet";
 import { todayString } from "@/lib/utils";
 
@@ -10,13 +11,15 @@ export async function getDashboardData() {
   const today = todayString();
   const settings = await getSettings();
 
-  const [weightRecords, runningRecords, todayMeals] = await Promise.all([
+  const [weightRecords, runningRecords, todayMeals, restDayTypes, runningTypes] = await Promise.all([
     prisma.weightRecord.findMany({ orderBy: { date: "desc" } }),
     prisma.runningRecord.findMany({ orderBy: { date: "desc" } }),
     prisma.meal.findMany({
       where: { date: today },
       include: { foodEntries: true },
     }),
+    getRestDayTypeSet(),
+    getRunningTypes(),
   ]);
 
   const weightStats = calculateWeightStats(
@@ -47,7 +50,7 @@ export async function getDashboardData() {
   const todayFoodEntries = todayMeals.flatMap((m) => m.foodEntries);
   const nutrition = calculateNutritionSummary(todayFoodEntries, settings);
 
-  const runningChartData = aggregateRunningByDate(last30Runs, last30Start, today);
+  const runningChartData = aggregateRunningByDate(last30Runs, last30Start, today, restDayTypes);
   const weightChartData = getWeightChartData(weightRecords, 30, today);
   const dayChanges = buildWeightDayChanges(weightRecords);
 
@@ -60,9 +63,9 @@ export async function getDashboardData() {
     },
     weight: weightStats,
     running: {
-      weekDistance: sumDistance(weekRuns),
-      monthDistance: sumDistance(monthRuns),
-      recentAveragePace: calculateAveragePace(runningRecords.slice(0, 10)),
+      weekDistance: sumDistance(weekRuns, restDayTypes),
+      monthDistance: sumDistance(monthRuns, restDayTypes),
+      recentAveragePace: calculateAveragePace(runningRecords.slice(0, 10), restDayTypes),
       totalCount: runningRecords.length,
       chartData: runningChartData,
       recentRecords: runningRecords.slice(0, 5),
@@ -74,16 +77,23 @@ export async function getDashboardData() {
       changeFromPrevious: dayChanges.get(record.date) ?? null,
     })),
     todayMeals,
+    runningTypes: runningTypes.map(({ value, label, excludeFromStats }) => ({
+      value,
+      label,
+      excludeFromStats,
+    })),
   };
 }
 
 function aggregateRunningByDate(
-  records: { date: string; distance: number }[],
+  records: { date: string; distance: number; type?: string }[],
   startDate: string,
   endDate: string,
+  restDayTypes: Set<string>,
 ): { date: string; distance: number }[] {
   const map = new Map<string, number>();
   for (const r of records) {
+    if (!isActiveRun(r, restDayTypes)) continue;
     map.set(r.date, (map.get(r.date) ?? 0) + r.distance);
   }
 
