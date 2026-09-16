@@ -1,0 +1,28 @@
+---
+description: Self Care 프로젝트 목적, 범위, 에이전트 기본 원칙
+alwaysApply: true
+---
+
+# Self Care — 프로젝트 코어
+
+개인용 건강 관리 웹앱(체중·러닝·식단·대시보드). Next.js App Router + Prisma(SQLite) + REST API(`src/app/api`).
+
+## 우선순위
+
+1. **기존 구조·아키텍처를 따른다.** 레이어: `app/api` → `lib/services` → `lib/calculations` / `lib/integrations`, UI는 `app/*` + `components/*`.
+2. **요청 범위 밖 수정 금지.** 동작·기능 변경 없이 문서/규칙만 다룰 때는 코드를 건드리지 않는다.
+3. **대규모 리팩터링·임의 코드 개선 금지.**
+
+## 의존성
+
+- 새 npm 패키지는 **사용자가 명시적으로 요청한 경우에만** 추가한다.
+- Prisma는 `@prisma/client` + `prisma db push` / `db:seed` 패턴을 유지한다 (`@prisma/composer` 아님).
+
+## 문서
+
+- 설계·구조: `docs/` (특히 `PROJECT_OVERVIEW.md`, `ARCHITECTURE.md`, `DEVELOPMENT_GUIDE.md`).
+- Next.js 16 에이전트 주의: `AGENTS.md` 상단 블록 유지( `next dev` 가 재생성할 수 있음).
+
+## 로케일
+
+- UI·API 오류 메시지는 한국어가 기본이다. 날짜 키는 `yyyy-MM-dd` 문자열(`lib/utils`).

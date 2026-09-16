@@ -1,0 +1,37 @@
+---
+description: 레이어·모듈 경계와 변경 시 확인할 위치
+globs: "src/**/*"
+alwaysApply: false
+---
+
+# 아키텍처
+
+## 레이어
+
+| 레이어 | 경로 | 역할 |
+|--------|------|------|
+| UI | `src/app/**/page.tsx`, `src/components/**` | 화면, 클라이언트 fetch |
+| API | `src/app/api/**/route.ts` | HTTP, try/catch, Zod, 서비스 호출 |
+| 서비스 | `src/lib/services/**` | Prisma 조합, 설정·대시보드·타입 |
+| 계산 | `src/lib/calculations/**` | 순수 함수(체중/러닝/식단/영양 목표) |
+| 통합 | `src/lib/integrations/google-sheets/**` | Sheets 읽기/쓰기·헤더 매핑·upsert |
+| 검증 | `src/lib/validations/schemas.ts` | Zod |
+| DB | `prisma/schema.prisma`, `src/lib/db.ts` | SQLite 모델 |
+
+## 코드 수정 전 확인
+
+- API 변경: 해당 `route.ts` + 호출하는 `page.tsx` + `schemas.ts` + `services/*`.
+- 러닝 통계: `running-types`(excludeFromStats) + `calculations/running.ts`.
+- Sheets 동기화: `running-sync.ts`, `header-map.ts`, `UserSettings` Google 필드.
+
+## 데이터 식별
+
+- 날짜: `WeightRecord.date`, `RunningRecord.date`, `Meal.date` — unique/복합 unique는 스키마 참고.
+- 러닝 타입: DB `RunningType` + seed/기본값 `running-type-defaults.ts`.
+
+## 설정
+
+- 일반 설정: `/api/settings` → `lib/services/settings.ts`.
+- Google Sheets UI 설정: `/api/integrations/google-sheets/settings` → `google-sheets-settings.ts`.
+
+자세한 흐름은 `docs/DATA_FLOW.md`, `docs/API.md` 참고.

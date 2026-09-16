@@ -5,7 +5,7 @@ import { getRestDayTypeSet, getRunningTypes } from "@/lib/services/running-types
 import { calculateWeightStats, getWeightChartData, buildWeightDayChanges } from "@/lib/calculations/weight";
 import { calculateAveragePace, sumDistance, isActiveRun } from "@/lib/calculations/running";
 import { calculateNutritionSummary } from "@/lib/calculations/diet";
-import { todayString } from "@/lib/utils";
+import { formatDate, todayString } from "@/lib/utils";
 
 export async function getDashboardData() {
   const today = todayString();
@@ -28,14 +28,11 @@ export async function getDashboardData() {
     today,
   );
 
-  const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 })
-    .toISOString()
-    .slice(0, 10);
-  const weekEnd = endOfWeek(new Date(), { weekStartsOn: 1 })
-    .toISOString()
-    .slice(0, 10);
-  const monthStart = startOfMonth(new Date()).toISOString().slice(0, 10);
-  const monthEnd = endOfMonth(new Date()).toISOString().slice(0, 10);
+  const now = new Date();
+  const weekStart = formatDate(startOfWeek(now, { weekStartsOn: 1 }));
+  const weekEnd = formatDate(endOfWeek(now, { weekStartsOn: 1 }));
+  const monthStart = formatDate(startOfMonth(now));
+  const monthEnd = formatDate(endOfMonth(now));
 
   const weekRuns = runningRecords.filter(
     (r) => r.date >= weekStart && r.date <= weekEnd,
@@ -44,7 +41,7 @@ export async function getDashboardData() {
     (r) => r.date >= monthStart && r.date <= monthEnd,
   );
 
-  const last30Start = subDays(new Date(), 29).toISOString().slice(0, 10);
+  const last30Start = formatDate(subDays(now, 29));
   const last30Runs = runningRecords.filter((r) => r.date >= last30Start);
 
   const todayFoodEntries = todayMeals.flatMap((m) => m.foodEntries);
@@ -101,7 +98,7 @@ function aggregateRunningByDate(
   const start = new Date(startDate);
   const end = new Date(endDate);
   for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-    const dateStr = d.toISOString().slice(0, 10);
+    const dateStr = formatDate(d);
     result.push({ date: dateStr, distance: map.get(dateStr) ?? 0 });
   }
   return result;

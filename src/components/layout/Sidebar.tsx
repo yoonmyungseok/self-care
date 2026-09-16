@@ -22,17 +22,23 @@ const mobileNavItems = [
   { href: "/settings", label: "설정", icon: "⚙️" },
 ];
 
-function isNavActive(pathname: string, href: string): boolean {
+function isNavActive(
+  pathname: string,
+  href: string,
+  options?: { includeSettingsSubpages?: boolean },
+): boolean {
   if (href === "/") return pathname === "/";
-  if (href === "/settings") {
+  if (pathname === href) return true;
+  if (pathname.startsWith(`${href}/`)) return true;
+
+  if (options?.includeSettingsSubpages && href === "/settings") {
     return (
-      pathname === "/settings" ||
       pathname.startsWith("/running-settings") ||
       pathname.startsWith("/food-settings")
     );
   }
-  if (pathname === href) return true;
-  return pathname.startsWith(`${href}/`);
+
+  return false;
 }
 
 export function Sidebar() {
@@ -76,7 +82,9 @@ export function MobileNav() {
       className="fixed bottom-0 left-0 right-0 z-40 flex min-h-14 border-t border-slate-200 bg-white pb-[env(safe-area-inset-bottom)] lg:hidden"
     >
       {mobileNavItems.map((item) => {
-        const isActive = isNavActive(pathname, item.href);
+        const isActive = isNavActive(pathname, item.href, {
+          includeSettingsSubpages: true,
+        });
         return (
           <Link
             key={item.href}

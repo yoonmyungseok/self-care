@@ -127,6 +127,16 @@ export const runningTypeSchema = z.object({
   sortOrder: z.number().int().nonnegative(),
 });
 
+export const googleSheetsSettingsSchema = z.object({
+  spreadsheetInput: z.string().optional(),
+  googleRunningSheetName: z.string().min(1, "러닝 시트 이름을 입력해주세요").optional(),
+  googleRunningSplitSheetName: z.string().min(1, "스플릿 시트 이름을 입력해주세요").optional(),
+  googleRunningHeaderMap: z.string().optional().nullable(),
+  googleRunningSplitHeaderMap: z.string().optional().nullable(),
+  googleRunningUpsertKey: z.enum(["record_id", "date"]).optional(),
+  googleRunningSplitUpsertKey: z.enum(["record_id_split", "date_split"]).optional(),
+});
+
 export const settingsSchema = z.object({
   targetWeight: z.number().positive("목표 체중은 0보다 커야 합니다"),
   birthYear: z

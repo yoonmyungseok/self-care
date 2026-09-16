@@ -1,6 +1,6 @@
 import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, subDays, subWeeks } from "date-fns";
 import { prisma } from "@/lib/db";
-import { errorResponse, jsonResponse } from "@/lib/utils";
+import { errorResponse, formatDate, jsonResponse, todayString } from "@/lib/utils";
 import { validateRunningRecord } from "@/lib/validations/schemas";
 import { getRestDayTypeSet, getRestDayTypeValues } from "@/lib/services/running-types";
 import {
@@ -33,23 +33,16 @@ export async function GET(request: Request) {
       orderBy: [{ date: "desc" }, { createdAt: "desc" }],
     });
 
-    const today = new Date().toISOString().slice(0, 10);
-    const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 })
-      .toISOString()
-      .slice(0, 10);
-    const weekEnd = endOfWeek(new Date(), { weekStartsOn: 1 })
-      .toISOString()
-      .slice(0, 10);
-    const monthStart = startOfMonth(new Date()).toISOString().slice(0, 10);
-    const monthEnd = endOfMonth(new Date()).toISOString().slice(0, 10);
-    const last7 = subDays(new Date(), 7).toISOString().slice(0, 10);
-    const last30Start = subDays(new Date(), 29).toISOString().slice(0, 10);
-    const lastWeekStart = startOfWeek(subWeeks(new Date(), 1), { weekStartsOn: 1 })
-      .toISOString()
-      .slice(0, 10);
-    const lastWeekEnd = endOfWeek(subWeeks(new Date(), 1), { weekStartsOn: 1 })
-      .toISOString()
-      .slice(0, 10);
+    const today = todayString();
+    const now = new Date();
+    const weekStart = formatDate(startOfWeek(now, { weekStartsOn: 1 }));
+    const weekEnd = formatDate(endOfWeek(now, { weekStartsOn: 1 }));
+    const monthStart = formatDate(startOfMonth(now));
+    const monthEnd = formatDate(endOfMonth(now));
+    const last7 = formatDate(subDays(now, 7));
+    const last30Start = formatDate(subDays(now, 29));
+    const lastWeekStart = formatDate(startOfWeek(subWeeks(now, 1), { weekStartsOn: 1 }));
+    const lastWeekEnd = formatDate(endOfWeek(subWeeks(now, 1), { weekStartsOn: 1 }));
 
     const weekRecords = records.filter((r) => r.date >= weekStart && r.date <= weekEnd);
     const lastWeekRecords = records.filter((r) => r.date >= lastWeekStart && r.date <= lastWeekEnd);
@@ -59,9 +52,8 @@ export async function GET(request: Request) {
 
     const weekDistance = sumDistance(weekRecords, restDayTypes);
     const lastWeekDistance = sumDistance(lastWeekRecords, restDayTypes);
-    const activeWeekRecords = weekRecords.filter((r) => isActiveRun(r, restDayTypes));
-    const activeMonthRecords = records.filter(
-      (r) => r.date >= monthStart && r.date <= monthEnd && isActiveRun(r, restDayTypes),
+    const monthRecords = records.filter(
+      (r) => r.date >= monthStart && r.date <= monthEnd,
     );
 
     const stats = {
@@ -72,15 +64,15 @@ export async function GET(request: Request) {
       ),
       last7DaysDistance: sumDistance(records.filter((r) => r.date >= last7), restDayTypes),
       last30DaysDistance: sumDistance(recent30Records, restDayTypes),
-      weekCount: countRecords(activeWeekRecords, weekStart, weekEnd),
-      monthCount: countRecords(activeMonthRecords, monthStart, monthEnd),
+      weekCount: countRecords(weekRecords, weekStart, weekEnd, restDayTypes),
+      monthCount: countRecords(monthRecords, monthStart, monthEnd, restDayTypes),
       recent30AveragePace: calculateAveragePace(recent30Records, restDayTypes),
       longestRun: findLongestRun(records, restDayTypes),
       lastWeekDistance,
       weekOverWeekChange: weekDistance - lastWeekDistance,
     };
 
-    const chartStart = subDays(new Date(), days - 1).toISOString().slice(0, 10);
+    const chartStart = formatDate(subDays(now, days - 1));
     const chartRecords = records.filter((r) => r.date >= chartStart && r.date <= today);
 
     const distanceByDate = new Map<string, number>();
@@ -99,7 +91,7 @@ export async function GET(request: Request) {
     const paceChart: { date: string; pace: number | null }[] = [];
 
     for (let d = new Date(chartStart); d <= new Date(today); d.setDate(d.getDate() + 1)) {
-      const dateStr = d.toISOString().slice(0, 10);
+      const dateStr = formatDate(d);
       distanceChart.push({ date: dateStr, distance: distanceByDate.get(dateStr) ?? 0 });
       const paceData = paceByDate.get(dateStr);
       paceChart.push({

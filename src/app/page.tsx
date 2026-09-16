@@ -11,7 +11,6 @@ import { formatWeightChange, getWeightChangeClassName, getWeightChangeTrend } fr
 import { formatPace } from "@/lib/calculations/running";
 import { formatDisplayDate } from "@/lib/utils";
 import { getRunningTypeLabel, getMealTypeLabel, isRestDay } from "@/lib/constants";
-
 interface DashboardData {
   weight: {
     current: number | null;
@@ -75,10 +74,26 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let active = true;
+
     fetch("/api/dashboard")
-      .then((res) => res.json())
-      .then(setData)
-      .finally(() => setLoading(false));
+      .then((res) => {
+        if (!res.ok) throw new Error(`dashboard ${res.status}`);
+        return res.json();
+      })
+      .then((json) => {
+        if (active) setData(json);
+      })
+      .catch(() => {
+        if (active) setData(null);
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
   }, []);
 
   if (loading) {

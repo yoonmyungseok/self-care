@@ -62,3 +62,7 @@ Desktop.ini
 # misc
 *.pem
 .turbo
+
+# Google service account keys (use .env / secrets/ locally)
+google-service-account.json
+/secrets/

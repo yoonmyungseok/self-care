@@ -95,11 +95,17 @@ export function sumDistance(
 }
 
 export function countRecords(
-  records: { date: string }[],
+  records: { date: string; distance?: number; type?: string }[],
   startDate: string,
   endDate: string,
+  restDayTypes?: Set<string>,
 ): number {
-  return records.filter((r) => r.date >= startDate && r.date <= endDate).length;
+  return records.filter((r) => {
+    if (r.date < startDate || r.date > endDate) return false;
+    if (!isActiveRun(r, restDayTypes)) return false;
+    if (typeof r.distance === "number" && r.distance <= 0) return false;
+    return true;
+  }).length;
 }
 
 export function findLongestRun(

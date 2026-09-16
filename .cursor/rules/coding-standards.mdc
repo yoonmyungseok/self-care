@@ -1,0 +1,38 @@
+---
+description: TypeScript/React/API 코딩 관례 (self-care)
+globs: "{src/**/*.{ts,tsx},prisma/**/*.ts,scripts/**/*.ts}"
+alwaysApply: false
+---
+
+# 코딩 표준
+
+## TypeScript
+
+- `@/` 경로 별칭 사용 (`tsconfig` paths).
+- API 입력은 `src/lib/validations/schemas.ts`의 Zod 스키마로 검증 후 서비스 호출.
+- API 응답은 `jsonResponse` / `errorResponse` (`src/lib/utils.ts`).
+
+## React (App Router)
+
+- 데이터 페이지는 `"use client"` + `fetch('/api/...')` 패턴이 많다. 기존 페이지와 동일한 패턴을 유지한다.
+- 레이아웃: `AppLayout` + `Sidebar` / `MobileNav` (`src/components/layout`).
+
+## Prisma
+
+- 싱글톤 클라이언트: `src/lib/db.ts`.
+- `UserSettings`는 `findFirst` 후 없으면 생성하는 패턴(`getSettings` 등).
+
+## Google Sheets
+
+- 자격 증명: `src/lib/integrations/google-sheets/service-account.ts` (env 또는 JSON 파일).
+- 동기화 로직은 `lib/integrations/google-sheets/*`, 라우트는 `app/api/integrations/google-sheets/*`.
+
+## 스타일
+
+- Tailwind CSS 4, `cn()` 유틸로 클래스 병합.
+- eslint: `eslint-config-next` (core-web-vitals + typescript).
+
+## 금지
+
+- export된 public API·라우트 시그니처·JSON 필드명을 **임의로** 바꾸지 않는다.
+- 요청 없이 deprecated 주석만 있는 코드를 대량 제거하지 않는다.

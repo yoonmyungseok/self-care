@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Card } from "@/components/ui/Card";
@@ -89,6 +90,8 @@ export default function RunningPage() {
   const [splits, setSplits] = useState<typeof emptySplit[]>([]);
   const [saving, setSaving] = useState(false);
   const [runningTypes, setRunningTypes] = useState<RunningType[]>([]);
+  const [exportingSheets, setExportingSheets] = useState(false);
+  const [sheetsReady, setSheetsReady] = useState<boolean | null>(null);
 
   const restDayValues = runningTypes.filter((t) => t.excludeFromStats).map((t) => t.value);
   const typeOptions = runningTypes.map(({ value, label }) => ({ value, label }));
@@ -110,6 +113,41 @@ export default function RunningPage() {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  useEffect(() => {
+    fetch("/api/integrations/google-sheets/status")
+      .then((res) => res.json())
+      .then((status) => setSheetsReady(Boolean(status.spreadsheetConfigured)))
+      .catch(() => setSheetsReady(false));
+  }, []);
+
+  const exportToGoogleSheets = async () => {
+    if (sheetsReady === false) {
+      showToast(
+        "스프레드시트 URL이 저장되지 않았습니다. 설정에서 URL 입력 후 「스프레드시트 설정 저장」을 눌러 주세요.",
+        "error",
+      );
+      return;
+    }
+    setExportingSheets(true);
+    try {
+      const res = await fetch("/api/integrations/google-sheets/running/sync", {
+        method: "POST",
+      });
+      const body = await res.json();
+      if (!res.ok) {
+        showToast(body.error ?? "보내기에 실패했습니다", "error");
+        return;
+      }
+      const { running, splits } = body;
+      setSheetsReady(true);
+      showToast(
+        `스프레드시트 갱신 완료 (러닝 추가 ${running.inserted} · 수정 ${running.updated}, 스플릿 추가 ${splits.inserted} · 수정 ${splits.updated})`,
+      );
+    } finally {
+      setExportingSheets(false);
+    }
+  };
 
   const isRest = isRestDay(form.type, restDayValues);
 
@@ -314,9 +352,27 @@ export default function RunningPage() {
           <h1 className="text-xl font-bold text-slate-900 sm:text-2xl">러닝 기록</h1>
           <p className="text-sm text-slate-500">러닝 활동을 기록하고 분석하세요</p>
         </div>
-        <Button onClick={openCreate} className="w-full sm:w-auto">
-          + 기록 추가
-        </Button>
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:items-end">
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <Button
+              type="button"
+              variant="secondary"
+              className="w-full sm:w-auto"
+              onClick={exportToGoogleSheets}
+              disabled={exportingSheets}
+            >
+              {exportingSheets ? "보내는 중..." : "구글 스프레드시트로보내기"}
+            </Button>
+            <Button onClick={openCreate} className="w-full sm:w-auto">
+              + 기록 추가
+            </Button>
+          </div>
+          {sheetsReady === false && (
+            <Link href="/settings" className="text-xs text-amber-700 hover:underline sm:text-right">
+              스프레드시트 URL 저장 필요 → 설정
+            </Link>
+          )}
+        </div>
       </div>
 
       {stats && (

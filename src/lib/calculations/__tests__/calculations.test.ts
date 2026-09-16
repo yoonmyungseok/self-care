@@ -71,12 +71,22 @@ describe("running calculations", () => {
 
   it("counts records in date range", () => {
     const records = [
-      { date: "2026-09-01" },
-      { date: "2026-09-03" },
-      { date: "2026-09-05" },
+      { date: "2026-09-01", distance: 5 },
+      { date: "2026-09-03", distance: 3 },
+      { date: "2026-09-05", distance: 10 },
     ];
     expect(countRecords(records, "2026-09-01", "2026-09-05")).toBe(3);
     expect(countRecords(records, "2026-09-02", "2026-09-04")).toBe(1);
+  });
+
+  it("excludes rest days from run count", () => {
+    const restDayTypes = new Set(["rest"]);
+    const records = [
+      { date: "2026-09-14", distance: 0, type: "rest" },
+      { date: "2026-09-13", distance: 8, type: "easy" },
+    ];
+    expect(countRecords(records, "2026-09-14", "2026-09-14", restDayTypes)).toBe(0);
+    expect(countRecords(records, "2026-09-13", "2026-09-14", restDayTypes)).toBe(1);
   });
 
   it("finds longest run", () => {
