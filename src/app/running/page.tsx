@@ -74,7 +74,7 @@ const emptyForm = {
   memo: "",
 };
 
-const emptySplit = { splitNumber: 1, distance: "", duration: "", heartRate: "", cadence: "" };
+const emptySplit = { splitNumber: 1, distance: "1", duration: "", heartRate: "", cadence: "" };
 
 export default function RunningPage() {
   const { showToast } = useToast();
@@ -594,12 +594,7 @@ export default function RunningPage() {
 
         {!isRest && (
         <div className="mt-6">
-          <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <h3 className="text-sm font-semibold text-slate-700">구간별 기록</h3>
-            <Button variant="secondary" size="sm" onClick={addSplit} className="w-full sm:w-auto">
-              + 구간 추가
-            </Button>
-          </div>
+          <h3 className="mb-3 text-sm font-semibold text-slate-700">구간별 기록</h3>
           {splits.map((split, index) => {
             const d = parseFloat(split.distance);
             const dur = parseDurationToSeconds(split.duration);
@@ -652,6 +647,14 @@ export default function RunningPage() {
               </div>
             );
           })}
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={addSplit}
+            className="mt-1 w-full sm:w-auto"
+          >
+            + 구간 추가
+          </Button>
         </div>
         )}
 

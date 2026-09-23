@@ -138,18 +138,34 @@ export default function DietPage() {
 
   const fetchData = useCallback(async () => {
     setLoading(true);
-    const [dietRes, foodRes] = await Promise.all([
-      fetch(`/api/diet?date=${selectedDate}`),
-      fetch("/api/diet/food-items"),
-    ]);
-    const dietData = await dietRes.json();
-    const foodData = await foodRes.json();
-    setMeals(dietData.meals);
-    setSummary(dietData.summary);
-    setTargets(dietData.targets);
-    setFoodItems(foodData);
-    setLoading(false);
-  }, [selectedDate]);
+    try {
+      const [dietRes, foodRes] = await Promise.all([
+        fetch(`/api/diet?date=${selectedDate}`),
+        fetch("/api/diet/food-items"),
+      ]);
+
+      if (!dietRes.ok || !foodRes.ok) {
+        const failedRes = !dietRes.ok ? dietRes : foodRes;
+        const body = await failedRes.json().catch(() => ({}));
+        showToast(
+          (body as { error?: string }).error ?? "식단 데이터를 불러오지 못했습니다",
+          "error",
+        );
+        return;
+      }
+
+      const dietData = await dietRes.json();
+      const foodData = await foodRes.json();
+      setMeals(dietData.meals);
+      setSummary(dietData.summary);
+      setTargets(dietData.targets);
+      setFoodItems(foodData);
+    } catch {
+      showToast("네트워크 오류로 데이터를 불러오지 못했습니다", "error");
+    } finally {
+      setLoading(false);
+    }
+  }, [selectedDate, showToast]);
 
   useEffect(() => {
     fetchData();
